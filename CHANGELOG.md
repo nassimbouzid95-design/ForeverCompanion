@@ -1,5 +1,15 @@
 # ForeverCompanion
 
+## v1.2.0
+
+New look for the whole addon: bigger text, dark panels with a cyan accent, gold titles.
+
+- Dungeon & raid guide redesigned: sidebar with search (dungeons, bosses, items), level ranges colored for your level, boss cards with their best items, a 3D model of each boss (drag to turn it), large loot rows with icons, item type and a drop-rate bar. Home page with the dungeons for your level.
+- New navigation arrow: larger, with a ring, colors from green (straight ahead) to red (behind), a glow when you are right on target and the time to arrival.
+- Quest window redesigned: colored tags (pick up, do, turn in), click a quest to point the arrow at it, right-click to skip it, objectives of the current quest.
+- XP window redesigned: big XP bar with rested XP, XP per hour, time to level, quests to turn in.
+- Info bar with icons, characters window with cards, camp buffs panel, new addon logo.
+
 ## v1.1.0
 
 The guide, the arrow, the quests and the map now work without any data collected first.

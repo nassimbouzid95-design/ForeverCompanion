@@ -2,7 +2,7 @@
 local ADDON, ns = ...
 local L = ns.L
 
-local ICON = "Interface\\Icons\\INV_Misc_Map_01"
+local ICON = "Interface\\AddOns\\ForeverCompanion\\Media\\Logo"
 
 local function OnClick(_, button)
 	if button == "RightButton" then
@@ -44,9 +44,9 @@ local function CreateOwnButton(db)
 	background:SetPoint("TOPLEFT", 7, -5)
 
 	local icon = button:CreateTexture(nil, "ARTWORK")
-	icon:SetSize(17, 17)
+	icon:SetSize(20, 20)
 	icon:SetTexture(ICON)
-	icon:SetPoint("TOPLEFT", 7, -6)
+	icon:SetPoint("TOPLEFT", 6, -5)
 
 	local function UpdatePosition()
 		local angle = math.rad(db.angle or 215)

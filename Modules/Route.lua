@@ -181,6 +181,17 @@ function Assistant:Sort()
 		add("accept", id, q[8], q[9], q[10], 1)
 	end
 	table.sort(steps, function(a, b) return a.score < b.score end)
+	-- A quest the player clicked stays first until it is done.
+	if self.pinned then
+		for i, step in ipairs(steps) do
+			if step.kind .. step.id == self.pinned then
+				table.remove(steps, i)
+				table.insert(steps, 1, step)
+				break
+			end
+			if i == #steps then self.pinned = nil end
+		end
+	end
 	return steps
 end
 
@@ -192,7 +203,7 @@ function Assistant:StepLine(step)
 	local q = ns.QuestDB[step.id]
 	local color = step.kind == "turnin" and "ff33ff33" or step.kind == "complete" and "ff66ccff" or "ffffd100"
 	local label = step.kind == "turnin" and L["Turn in"] or step.kind == "complete" and L["Do"] or L["Accept"]
-	local dist = step.dist >= 1e6 and (ns.CONTINENT_NAMES[step.cont] or "?") or string.format(L["%d yards"], step.dist)
+	local dist = step.dist >= 1e6 and L[ns.CONTINENT_NAMES[step.cont] or "Kalimdor"] or string.format(L["%d yards"], step.dist)
 	return string.format("|c%s%s|r [%d] %s |cff888888- %s|r", color, label, q[1] > 0 and q[1] or UnitLevel("player"), self:Title(step.id), dist)
 end
 
@@ -414,83 +425,78 @@ end
 ---------------------------------------------------------------------------
 -- Window
 ---------------------------------------------------------------------------
+local UI = ns.UI
+local C = UI.COLORS
+local TAG = {
+	accept = { L["Accept"], C.gold },
+	complete = { L["Do"], { 0.4, 0.8, 1 } },
+	turnin = { L["Turn in"], C.good },
+}
+
 function Route:CreateWindow()
 	if self.frame then return end
-	local f = CreateFrame("Frame", "ForeverCompanionRouteFrame", UIParent, "BackdropTemplate")
-	f:SetSize(340, 120)
-	f:SetBackdrop({
-		bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-		edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-		tile = true, tileSize = 16, edgeSize = 12,
-		insets = { left = 3, right = 3, top = 3, bottom = 3 },
-	})
-	f:SetBackdropColor(0, 0, 0, 0.75)
-	f:SetMovable(true)
-	f:EnableMouse(true)
-	f:SetClampedToScreen(true)
-	f:RegisterForDrag("LeftButton")
-	f:SetScript("OnDragStart", function(frame) if not self:Settings().locked then frame:StartMoving() end end)
-	f:SetScript("OnDragStop", function(frame)
-		frame:StopMovingOrSizing()
-		local point, _, relPoint, x, y = frame:GetPoint()
-		self:Settings().point = { point, "UIParent", relPoint, x, y }
+	local f = UI.Panel("ForeverCompanionRouteFrame", 360, 200, function() return self:Settings() end)
+
+	f.title = UI.Text(f, 16, C.gold)
+	f.title:SetPoint("TOPLEFT", 14, -10)
+	f.title:SetPoint("RIGHT", -70, 0)
+	f.title:SetWordWrap(false)
+	f.progress = UI.Text(f, 12, C.muted, "RIGHT")
+	f.progress:SetPoint("TOPRIGHT", -12, -13)
+
+	f.body = UI.Text(f, 13)
+	f.body:SetPoint("TOPLEFT", 14, -36)
+	f.body:SetPoint("RIGHT", -12, 0)
+	f.body:SetJustifyV("TOP")
+
+	f.rows = UI.Pool(function(parent)
+		local row = CreateFrame("Button", nil, parent)
+		row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+		row.bg = UI.Fill(row, { 1, 1, 1, 0 }, "BACKGROUND")
+		row.bg:SetAllPoints()
+		row.tag = UI.Chip(row, 11)
+		row.tag:SetPoint("TOPLEFT", 0, -5)
+		row.title = UI.Text(row, 13)
+		row.title:SetPoint("TOPLEFT", 76, -6)
+		row.title:SetPoint("RIGHT", -64, 0)
+		row.title:SetWordWrap(false)
+		row.dist = UI.Text(row, 12, C.muted, "RIGHT")
+		row.dist:SetPoint("TOPRIGHT", -4, -7)
+		row.detail = UI.Text(row, 12, C.muted)
+		row.detail:SetPoint("TOPLEFT", row.title, "BOTTOMLEFT", 0, -4)
+		row.detail:SetPoint("RIGHT", -4, 0)
+		row.detail:SetJustifyV("TOP")
+		row:SetScript("OnEnter", function(r)
+			if not r.first then r.bg:SetVertexColor(1, 1, 1, 0.05) end
+			GameTooltip:SetOwner(r, "ANCHOR_LEFT")
+			GameTooltip:AddLine(r.titleText or "")
+			GameTooltip:AddLine(L["Click: point the arrow here"], 0.7, 0.7, 0.7)
+			GameTooltip:AddLine(L["Right-click: skip this quest"], 0.7, 0.7, 0.7)
+			GameTooltip:Show()
+		end)
+		row:SetScript("OnLeave", function(r)
+			if not r.first then r.bg:SetVertexColor(1, 1, 1, 0) end
+			GameTooltip_Hide()
+		end)
+		return row
 	end)
 
-	local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	title:SetPoint("TOPLEFT", 10, -8)
-	title:SetPoint("TOPRIGHT", -60, -8)
-	title:SetJustifyH("LEFT")
-	f.title = title
+	f.footer = UI.Text(f, 12, C.muted)
+	f.footer:SetPoint("RIGHT", -12, 0)
+	f.footer:SetWordWrap(true)
 
-	local progress = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	progress:SetPoint("TOPRIGHT", -10, -9)
-	f.progress = progress
-
-	local body = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	body:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -6)
-	body:SetPoint("RIGHT", f, "RIGHT", -10, 0)
-	body:SetJustifyH("LEFT")
-	body:SetJustifyV("TOP")
-	f.body = body
-
-	local nextStep = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	nextStep:SetPoint("TOPLEFT", body, "BOTTOMLEFT", 0, -6)
-	nextStep:SetPoint("RIGHT", f, "RIGHT", -10, 0)
-	nextStep:SetJustifyH("LEFT")
-	f.nextStep = nextStep
-
-	local function MakeButton(text, onClick)
-		local b = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-		b:SetSize(70, 20)
-		b:SetText(text)
-		b:SetScript("OnClick", onClick)
-		return b
-	end
-	f.back = MakeButton(L["Back"], function() self:Back() end)
-	f.back:SetPoint("BOTTOMLEFT", 8, 8)
-	f.skip = MakeButton(L["Done"], function() self:MarkCurrentDone() end)
-	f.skip:SetPoint("BOTTOMRIGHT", -8, 8)
-	f.skip:SetScript("OnEnter", function(b)
-		GameTooltip:SetOwner(b, "ANCHOR_TOP")
-		GameTooltip:AddLine(self.route and L["Mark this step as done"] or L["Skip this quest and point to the next one"])
-		GameTooltip:Show()
-	end)
-	f.skip:SetScript("OnLeave", GameTooltip_Hide)
-	f.dungeon = MakeButton(L["Dungeon"], function()
+	f.back = UI.Button(f, L["Back"], 80, 24, "normal", function() self:Back() end)
+	f.back:SetPoint("BOTTOMLEFT", 14, 10)
+	f.skip = UI.Button(f, L["Done"], 80, 24, "normal", function() self:MarkCurrentDone() end)
+	f.skip:SetPoint("BOTTOMRIGHT", -12, 10)
+	f.dungeon = UI.Button(f, L["Dungeon"], 100, 24, "accent", function()
 		local target = f.dungeonTarget
 		if target then
 			ns.SetWaypoint(target.where.zone, target.where.x, target.where.y, target.entry.name or ns.InstanceName(target.entry.id), "guide")
 		end
 	end)
-	f.dungeon:SetWidth(90)
-	f.dungeon:SetPoint("BOTTOM", 0, 8)
-	f.dungeon:SetScript("OnEnter", function(b)
-		GameTooltip:SetOwner(b, "ANCHOR_TOP")
-		GameTooltip:AddLine(L["Point the arrow to the nearest dungeon for your level"])
-		GameTooltip:Show()
-	end)
-	f.dungeon:SetScript("OnLeave", GameTooltip_Hide)
-
+	f.dungeon:SetPoint("RIGHT", f.skip, "LEFT", -8, 0)
+	f.dungeon.tooltip = L["Point the arrow to the nearest dungeon for your level"]
 	self.frame = f
 end
 
@@ -506,58 +512,91 @@ function Route:UpdateWindow()
 		return
 	end
 	f:Show()
+	f.rows:ReleaseAll()
 	local recording = CharState().recording
+	local y = 38
 	if not self.route then
 		f.title:SetText(L["Next quests"])
-		f.progress:SetText("")
-		local lines = {}
-		if recording then
-			lines[#lines + 1] = "|cffff6666" .. string.format(L["Recording a route: %d steps so far. /fc route stop to finish."], #recording.steps) .. "|r"
-		end
-		for i = 1, math.min(s.assistantCount, #Assistant.steps) do
-			lines[#lines + 1] = Assistant:StepLine(Assistant.steps[i])
-		end
-		if #Assistant.steps == 0 then
-			lines[#lines + 1] = "|cff888888" .. L["No quest found around your level. Try another zone or a dungeon."] .. "|r"
-		end
+		f.progress:SetText(recording and UI.Colorize(string.format(L["Recording: %d steps"], #recording.steps), C.bad) or "")
+		f.body:SetText("")
 		local best = Assistant:Best()
-		if best and best.kind == "complete" and C_QuestLog.GetQuestObjectives then
-			for _, obj in ipairs(C_QuestLog.GetQuestObjectives(best.id) or {}) do
-				if obj.text and not ns.IsSecret(obj.text) then
-					lines[#lines + 1] = (obj.finished and "|cff33ff33" or "|cffbbbbbb") .. "   - " .. obj.text .. "|r"
+		for i = 1, math.min(s.assistantCount, #Assistant.steps) do
+			local step = Assistant.steps[i]
+			local row = f.rows:Acquire(f)
+			local tag = TAG[step.kind]
+			row.tag:Set(tag[1], tag[2])
+			row.tag:SetWidth(68)
+			local q = ns.QuestDB[step.id]
+			row.titleText = Assistant:Title(step.id)
+			row.title:SetText(UI.Colorize("[" .. (q[1] > 0 and q[1] or UnitLevel("player")) .. "] ", C.muted) .. row.titleText)
+			row.dist:SetText(step.dist >= 1e6 and L[ns.CONTINENT_NAMES[step.cont] or "Kalimdor"] or string.format(L["%d yards"], step.dist))
+			row.first = i == 1
+			row.bg:SetVertexColor(C.accent[1], C.accent[2], C.accent[3], row.first and 0.12 or 0)
+			local lines = {}
+			if row.first and step.kind == "complete" and C_QuestLog.GetQuestObjectives then
+				for _, obj in ipairs(C_QuestLog.GetQuestObjectives(step.id) or {}) do
+					if obj.text and not ns.IsSecret(obj.text) then
+						lines[#lines + 1] = (obj.finished and "|TInterface\\RaidFrame\\ReadyCheck-Ready:12|t " or "- ") .. UI.Colorize(obj.text, obj.finished and C.good or C.muted)
+					end
 				end
 			end
+			row.detail:SetText(table.concat(lines, "\n"))
+			local h = 26 + (#lines > 0 and (row.detail:GetStringHeight() + 6) or 0)
+			row:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -y)
+			row:SetPoint("RIGHT", f, "RIGHT", -10, 0)
+			row:SetHeight(h)
+			row:SetScript("OnClick", function(_, button)
+				if button == "RightButton" then
+					Assistant.ignored[step.kind .. step.id] = true
+				else
+					Assistant.pinned = step.kind .. step.id
+					ns.SetWorldWaypoint(step.cont, step.x, step.y, Assistant:Title(step.id), OWNER)
+				end
+				self:Refresh()
+			end)
+			y = y + h + 2
 		end
-		f.body:SetText(table.concat(lines, "\n"))
+		if #Assistant.steps == 0 then
+			f.body:SetText(UI.Colorize(L["No quest found around your level. Try another zone or a dungeon."], C.muted))
+			y = y + f.body:GetStringHeight() + 4
+		end
 		local dungeons = s.suggestDungeons and Assistant:SuggestedDungeons() or {}
 		if dungeons[1] then
 			local names = {}
 			for i = 1, math.min(3, #dungeons) do
 				local e = dungeons[i].entry
-				names[#names + 1] = string.format("%s (%d-%d)", e.name or ns.InstanceName(e.id), e.min, e.max)
+				names[#names + 1] = UI.Colorize(e.name or ns.InstanceName(e.id), C.text) .. UI.Colorize(string.format(" %d-%d", e.min, e.max), C.muted)
 			end
-			f.nextStep:SetText(L["Dungeons for your level:"] .. " " .. table.concat(names, ", "))
+			f.footer:SetText(L["Dungeons for your level:"] .. " " .. table.concat(names, ", "))
 		else
-			f.nextStep:SetText("")
+			f.footer:SetText("")
 		end
 		f.dungeon:SetShown(dungeons[1] ~= nil)
 		f.dungeonTarget = dungeons[1]
 		f.back:Hide()
+		f.skip:SetText(L["Skip"])
+		f.skip.tooltip = L["Skip this quest and point to the next one"]
 		f.skip:SetShown(best ~= nil)
 	else
 		f.dungeon:Hide()
 		local state = CharState()
 		local step = self.route.steps[state.step]
 		f.title:SetText(self.route.name or self.route.id)
-		f.progress:SetFormattedText("%d/%d", state.step, #self.route.steps)
+		f.progress:SetFormattedText("%d / %d", state.step, #self.route.steps)
 		f.body:SetText(step and self:StepText(step) or "")
+		y = y + f.body:GetStringHeight() + 6
 		local nextOne = self.route.steps[state.step + 1]
-		f.nextStep:SetText(nextOne and (L["Next:"] .. " " .. self:StepText(nextOne, true)) or "")
+		f.footer:SetText(nextOne and (L["Next:"] .. " " .. self:StepText(nextOne, true)) or "")
 		f.back:SetShown(state.step > 1)
+		f.skip:SetText(L["Done"])
+		f.skip.tooltip = L["Mark this step as done"]
 		f.skip:Show()
 	end
-	local height = 44 + f.body:GetStringHeight() + f.nextStep:GetStringHeight() + 20
-	f:SetHeight(math.max(90, height))
+	f.footer:ClearAllPoints()
+	f.footer:SetPoint("TOPLEFT", f, "TOPLEFT", 14, -(y + 6))
+	f.footer:SetPoint("RIGHT", f, "RIGHT", -12, 0)
+	local footer = f.footer:GetText() ~= "" and f.footer:GetStringHeight() + 10 or 0
+	f:SetHeight(y + footer + 46)
 end
 
 function ns.ToggleRouteWindow()

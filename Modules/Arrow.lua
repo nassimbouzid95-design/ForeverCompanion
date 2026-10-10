@@ -53,7 +53,6 @@ ns.arrivalCallbacks = {}
 function Arrow:CreateFrame()
 	if self.frame then return end
 	local f = CreateFrame("Button", "ForeverCompanionArrow", UIParent)
-	f:SetSize(56, 42)
 	f:SetMovable(true)
 	f:SetClampedToScreen(true)
 	f:RegisterForDrag("LeftButton")
@@ -78,17 +77,32 @@ function Arrow:CreateFrame()
 	end)
 	f:SetScript("OnLeave", GameTooltip_Hide)
 
+	local UI, C = ns.UI, ns.UI.COLORS
+	f:SetSize(84, 84)
+	local ring = f:CreateTexture(nil, "BACKGROUND")
+	ring:SetTexture(UI.MEDIA .. "Ring")
+	ring:SetAllPoints()
+	f.ring = ring
+	local glow = f:CreateTexture(nil, "BORDER")
+	glow:SetTexture(UI.MEDIA .. "Glow")
+	glow:SetPoint("CENTER")
+	glow:SetSize(110, 110)
+	glow:SetBlendMode("ADD")
+	glow:SetAlpha(0)
+	f.glow = glow
 	local tex = f:CreateTexture(nil, "ARTWORK")
-	tex:SetTexture("Interface\\Minimap\\MinimapArrow")
-	tex:SetSize(42, 42)
+	tex:SetTexture(UI.MEDIA .. "Arrow")
+	tex:SetSize(60, 60)
 	tex:SetPoint("CENTER")
 	f.arrow = tex
 
-	local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	title:SetPoint("TOP", f, "BOTTOM", 0, -2)
+	local title = UI.Text(f, 15, C.gold, "CENTER")
+	title:SetPoint("TOP", f, "BOTTOM", 0, -4)
+	title:SetWidth(260)
+	title:SetWordWrap(false)
 	f.title = title
-	local dist = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	dist:SetPoint("TOP", title, "BOTTOM", 0, -1)
+	local dist = UI.Text(f, 13, C.text, "CENTER")
+	dist:SetPoint("TOP", title, "BOTTOM", 0, -3)
 	f.dist = dist
 
 	local elapsed = 0
@@ -133,7 +147,8 @@ function Arrow:Update()
 		if continent ~= waypoint.continent then
 			f.arrow:SetRotation(0)
 			f.arrow:SetVertexColor(0.6, 0.6, 0.6)
-			f.dist:SetText(string.format(L["Go to %s"], ns.CONTINENT_NAMES[waypoint.continent] or "?"))
+			f.glow:SetAlpha(0)
+			f.dist:SetText(string.format(L["Go to %s"], L[ns.CONTINENT_NAMES[waypoint.continent] or "Kalimdor"]))
 			return
 		end
 		distance, angle = ns.WorldVector(px, py, waypoint.wx, waypoint.wy)
@@ -145,6 +160,7 @@ function Arrow:Update()
 		-- Position hidden (inside an instance) or unknown.
 		f.arrow:SetRotation(0)
 		f.arrow:SetVertexColor(0.6, 0.6, 0.6)
+		f.glow:SetAlpha(0)
 		f.dist:SetText(waypoint.mapID and string.format(L["Go to %s"], ns.MapName(waypoint.mapID)) or "")
 		return
 	end
@@ -152,11 +168,33 @@ function Arrow:Update()
 	if facing and not ns.IsSecret(facing) then
 		f.arrow:SetRotation(angle - facing)
 	end
-	-- Green when facing it, red when behind.
+	-- Green when facing it, yellow on the side, red when behind; glows when right on target.
 	local diff = facing and math.abs(((angle - facing + math.pi) % (2 * math.pi)) - math.pi) or 0
 	local t = diff / math.pi
-	f.arrow:SetVertexColor(t, 1 - t * 0.5, 0.1)
-	f.dist:SetFormattedText(L["%d yards"], distance)
+	if t < 0.5 then
+		f.arrow:SetVertexColor(0.3 + t * 1.4, 1, 0.35 - t * 0.5)
+	else
+		f.arrow:SetVertexColor(1, 1 - (t - 0.5) * 1.6, 0.1)
+	end
+	f.glow:SetAlpha(t < 0.06 and 0.35 or 0)
+	f.glow:SetVertexColor(0.3, 1, 0.4)
+
+	-- Time to arrival from the speed measured over the last seconds.
+	local now = GetTime()
+	local track = self.track
+	if not track or track.target ~= waypoint then
+		track = { target = waypoint, time = now, dist = distance, speed = 0 }
+		self.track = track
+	elseif now - track.time >= 1 then
+		local speed = (track.dist - distance) / (now - track.time)
+		track.speed = track.speed * 0.6 + speed * 0.4
+		track.time, track.dist = now, distance
+	end
+	local text = string.format(L["%d yards"], distance)
+	if track.speed > 1 then
+		text = text .. ns.UI.Colorize("  ·  " .. ns.FormatDuration(distance / track.speed), ns.UI.COLORS.muted)
+	end
+	f.dist:SetText(text)
 
 	if distance <= self:Settings().arrivalDistance then
 		local reached = waypoint

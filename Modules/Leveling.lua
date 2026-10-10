@@ -37,49 +37,30 @@ end
 ---------------------------------------------------------------------------
 function Leveling:CreateTracker()
 	if self.frame then return end
-	local s = self:Settings()
-	local f = CreateFrame("Frame", "ForeverCompanionXPFrame", UIParent, "BackdropTemplate")
-	f:SetSize(260, 58)
-	f:SetBackdrop({
-		bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-		edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-		tile = true, tileSize = 16, edgeSize = 12,
-		insets = { left = 3, right = 3, top = 3, bottom = 3 },
-	})
-	f:SetBackdropColor(0, 0, 0, 0.7)
-	f:SetMovable(true)
-	f:EnableMouse(true)
-	f:RegisterForDrag("LeftButton")
-	f:SetClampedToScreen(true)
-	f:SetScript("OnDragStart", function(frame)
-		if not self:Settings().locked then frame:StartMoving() end
-	end)
-	f:SetScript("OnDragStop", function(frame)
-		frame:StopMovingOrSizing()
-		local point, _, relPoint, x, y = frame:GetPoint()
-		self:Settings().point = { point, "UIParent", relPoint, x, y }
-	end)
+	local UI, C = ns.UI, ns.UI.COLORS
+	local f = UI.Panel("ForeverCompanionXPFrame", 360, 92, function() return self:Settings() end)
 
-	local bar = CreateFrame("StatusBar", nil, f)
-	bar:SetPoint("TOPLEFT", 8, -8)
-	bar:SetPoint("TOPRIGHT", -8, -8)
-	bar:SetHeight(12)
-	bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
-	bar:SetStatusBarColor(0.58, 0.0, 0.55)
-	local rested = CreateFrame("StatusBar", nil, f)
-	rested:SetAllPoints(bar)
-	rested:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
-	rested:SetStatusBarColor(0.0, 0.39, 0.88, 0.5)
-	rested:SetFrameLevel(bar:GetFrameLevel() - 1)
-	local barText = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	barText:SetPoint("CENTER")
+	f.level = UI.Text(f, 16, C.gold)
+	f.level:SetPoint("TOPLEFT", 14, -10)
+	f.rate = UI.Text(f, 13, C.text, "RIGHT")
+	f.rate:SetPoint("TOPRIGHT", -12, -12)
 
-	local line1 = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-	line1:SetPoint("TOPLEFT", bar, "BOTTOMLEFT", 0, -4)
-	line1:SetJustifyH("LEFT")
-	local line2 = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-	line2:SetPoint("TOPLEFT", line1, "BOTTOMLEFT", 0, -2)
-	line2:SetJustifyH("LEFT")
+	local bar = UI.Bar(f, 20, C.xp)
+	bar:SetPoint("TOPLEFT", 14, -34)
+	bar:SetPoint("TOPRIGHT", -12, -34)
+	-- Rested XP: a lighter bar under the XP bar.
+	local rested = CreateFrame("StatusBar", nil, bar)
+	rested:SetPoint("TOPLEFT", 1, -1)
+	rested:SetPoint("BOTTOMRIGHT", -1, 1)
+	rested:SetStatusBarTexture(UI.MEDIA .. "Bar")
+	rested:SetStatusBarColor(C.rested[1], C.rested[2], C.rested[3], C.rested[4])
+	rested:SetFrameLevel(bar.bar:GetFrameLevel() - 1)
+	bar.text:SetFontObject(UI.Font(12))
+
+	f.line1 = UI.Text(f, 12, C.muted)
+	f.line1:SetPoint("TOPLEFT", bar, "BOTTOMLEFT", 0, -7)
+	f.line1:SetPoint("RIGHT", -12, 0)
+	f.line1:SetWordWrap(false)
 
 	f:SetScript("OnEnter", function(frame)
 		GameTooltip:SetOwner(frame, "ANCHOR_BOTTOM")
@@ -95,7 +76,7 @@ function Leveling:CreateTracker()
 		if button == "RightButton" then self:ResetSession() end
 	end)
 
-	f.bar, f.rested, f.barText, f.line1, f.line2 = bar, rested, barText, line1, line2
+	f.bar, f.rested = bar, rested
 	self.frame = f
 	self:ApplyLayout()
 end
@@ -142,26 +123,29 @@ function Leveling:UpdateTracker()
 	local xp, max = UnitXP("player"), UnitXPMax("player")
 	if ns.AnySecret(xp, max) or max == 0 then return end
 	local restedXP = GetXPExhaustion() or 0
-	f.bar:SetMinMaxValues(0, max)
-	f.bar:SetValue(xp)
+	local C = ns.UI.COLORS
+	f.bar:SetValue(xp, max)
 	f.rested:SetMinMaxValues(0, max)
 	f.rested:SetValue(math.min(max, xp + restedXP))
-	f.barText:SetFormattedText("%s %d  -  %.1f%%", LEVEL, level, xp / max * 100)
+	f.bar.text:SetFormattedText("%s / %s   (%.1f%%)", ns.FormatNumber(xp), ns.FormatNumber(max), xp / max * 100)
+	f.level:SetFormattedText("%s %d", LEVEL, level)
 
 	local elapsed = GetTime() - session.start
 	local perHour = elapsed > 30 and session.gained / elapsed * 3600 or 0
 	local remaining = max - xp
 	local eta = perHour > 0 and remaining / perHour * 3600 or nil
-	f.line1:SetFormattedText(L["XP/hour: %s  |  Level in: %s"], ns.FormatNumber(math.floor(perHour)), ns.FormatDuration(eta))
+	f.rate:SetText(ns.UI.Colorize(ns.FormatNumber(math.floor(perHour)), C.text) .. ns.UI.Colorize(" " .. L["XP/h"], C.muted))
 
 	local questXP, questCount = CompletedQuestXP()
-	local restedPct = restedXP / max * 100
-	f.line2:SetFormattedText(L["Rested: %.0f%%  |  Quests to turn in: %d (%s XP)"], restedPct, questCount, ns.FormatNumber(questXP))
-	if questXP >= remaining and questCount > 0 then
-		f.line2:SetTextColor(0.2, 1, 0.2)
-	else
-		f.line2:SetTextColor(1, 0.82, 0)
+	local parts = {
+		L["Level in:"] .. " " .. ns.UI.Colorize(ns.FormatDuration(eta), C.text),
+		L["Rested:"] .. " " .. ns.UI.Colorize(string.format("%.0f%%", restedXP / max * 100), { 0.45, 0.7, 1 }),
+	}
+	if questCount > 0 then
+		local color = questXP >= remaining and C.good or C.gold
+		parts[#parts + 1] = ns.UI.Colorize(string.format(L["%d to turn in (+%s XP)"], questCount, ns.FormatNumber(questXP)), color)
 	end
+	f.line1:SetText(table.concat(parts, ns.UI.Colorize("  ·  ", C.muted)))
 end
 
 ---------------------------------------------------------------------------

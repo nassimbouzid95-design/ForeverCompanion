@@ -50,18 +50,10 @@ end
 
 function Camps:CreateTracker()
 	if self.frame then return end
-	local f = CreateFrame("Frame", "ForeverCompanionCampFrame", UIParent)
-	f:SetSize(200, 20)
-	f:SetMovable(true)
-	f:EnableMouse(true)
-	f:SetClampedToScreen(true)
-	f:RegisterForDrag("LeftButton")
-	f:SetScript("OnDragStart", function(frame) if not self:Settings().locked then frame:StartMoving() end end)
-	f:SetScript("OnDragStop", function(frame)
-		frame:StopMovingOrSizing()
-		local point, _, relPoint, x, y = frame:GetPoint()
-		self:Settings().point = { point, "UIParent", relPoint, x, y }
-	end)
+	local f = ns.UI.Panel("ForeverCompanionCampFrame", 240, 40, function() return self:Settings() end)
+	f.title = ns.UI.Text(f, 13, ns.UI.COLORS.accent)
+	f.title:SetPoint("TOPLEFT", 14, -9)
+	f.title:SetText(L["Camps"])
 	f.lines = {}
 	self.frame = f
 end
@@ -77,18 +69,22 @@ function Camps:UpdateTracker()
 		local line = f.lines[i]
 		if not line then
 			line = CreateFrame("Frame", nil, f)
-			line:SetSize(200, 20)
-			line.icon = line:CreateTexture(nil, "ARTWORK")
-			line.icon:SetSize(18, 18)
+			line:SetSize(220, 26)
+			line.icon = ns.UI.ItemIcon(line, 22)
 			line.icon:SetPoint("LEFT")
-			line.text = line:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-			line.text:SetPoint("LEFT", line.icon, "RIGHT", 4, 0)
+			line.text = ns.UI.Text(line, 13)
+			line.text:SetPoint("LEFT", line.icon, "RIGHT", 8, 0)
+			line.time = ns.UI.Text(line, 13, ns.UI.COLORS.gold, "RIGHT")
+			line.time:SetPoint("RIGHT", line, "RIGHT", 0, 0)
+			line.text:SetPoint("RIGHT", line.time, "LEFT", -6, 0)
+			line.text:SetWordWrap(false)
 			f.lines[i] = line
 		end
-		line:SetPoint("TOPLEFT", f, "TOPLEFT", 0, -(i - 1) * 22)
-		line.icon:SetTexture(buff.icon)
+		line:SetPoint("TOPLEFT", f, "TOPLEFT", 14, -30 - (i - 1) * 28)
+		line.icon:SetItem(buff.icon)
 		local left = buff.expires and buff.expires > 0 and (buff.expires - GetTime()) or nil
-		line.text:SetText(buff.name .. "  " .. (left and ns.FormatDuration(left) or ""))
+		line.text:SetText(buff.name)
+		line.time:SetText(left and ns.FormatDuration(left) or "")
 		if left and left < s.warnExpire then
 			line.text:SetTextColor(1, 0.3, 0.3)
 			local key = buff.name .. ":" .. tostring(buff.expires)
@@ -104,7 +100,7 @@ function Camps:UpdateTracker()
 		line:Show()
 	end
 	for i = #buffs + 1, #f.lines do f.lines[i]:Hide() end
-	f:SetHeight(math.max(20, #buffs * 22))
+	f:SetHeight(40 + #buffs * 28)
 	f:SetShown(#buffs > 0)
 end
 

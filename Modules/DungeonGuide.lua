@@ -4,20 +4,23 @@
 -- knows (new Forever content) are listed too.
 local _, ns = ...
 local L = ns.L
+local UI = ns.UI
+local C = UI.COLORS
 
 local Guide = ns.NewModule("DungeonGuide", {
 	minTrashQuality = 2, -- uncommon and better
 	wishlistAlert = true,
+	showModels = true,
 }, {
 	wishlist = {}, -- [itemID] = true
+	window = {},   -- position and size
+	collapsed = {}, -- [category] = true
 })
 
-local AceGUI = LibStub("AceGUI-3.0")
-local SEP = "\001"
+local SIDEBAR_WIDTH = 290
 
 ---------------------------------------------------------------------------
--- Instance list: the built-in database (Data\InstanceDB.lua) first, then instances only the
--- drop collector knows (new Forever content).
+-- Data
 ---------------------------------------------------------------------------
 local function EntryName(entry)
 	if entry.kind == "world" then return L["World bosses"] end
@@ -26,9 +29,11 @@ end
 ns.InstanceEntryName = EntryName
 
 function Guide:BuildList()
-	local list, known = {}, {}
+	local list, order, known = {}, {}, {}
 	for index, entry in ipairs(ns.InstanceDB or {}) do
-		list["k" .. index] = entry
+		local key = "k" .. index
+		list[key] = entry
+		order[#order + 1] = key
 		if entry.id then known[entry.id] = true end
 	end
 	for id, data in pairs(ns.CollectedInstances and ns.CollectedInstances() or {}) do
@@ -37,15 +42,22 @@ function Guide:BuildList()
 			for _, raid in ipairs(ns.ForeverRaids) do
 				if raid.name == entry.name then entry.min, entry.max, entry.size, entry.isNew = raid.min, raid.max, raid.size, true end
 			end
-			list["c" .. id] = entry
+			local key = "c" .. id
+			list[key] = entry
+			order[#order + 1] = key
 		end
 	end
-	self.list = list
+	table.sort(order, function(a, b)
+		local ea, eb = list[a], list[b]
+		if (ea.min or 99) ~= (eb.min or 99) then return (ea.min or 99) < (eb.min or 99) end
+		return a < b
+	end)
+	self.list, self.order = list, order
 	return list
 end
 
--- Bosses of a collector-only instance.
-function Guide:CollectedBosses(entry)
+function Guide:Bosses(entry)
+	if not entry.collected then return entry.bosses or {} end
 	local bosses = {}
 	local data = ns.CollectedInstances()[entry.id]
 	if data then
@@ -55,147 +67,6 @@ function Guide:CollectedBosses(entry)
 		table.sort(bosses, function(a, b) return a.name < b.name end)
 	end
 	return bosses
-end
-
-function Guide:Bosses(entry)
-	if entry.collected then return self:CollectedBosses(entry) end
-	return entry.bosses or {}
-end
-
----------------------------------------------------------------------------
--- Tree
----------------------------------------------------------------------------
-local function SortNodes(a, b)
-	if (a.entry.min or 99) ~= (b.entry.min or 99) then return (a.entry.min or 99) < (b.entry.min or 99) end
-	return a.index < b.index
-end
-
-local function BossLabel(boss)
-	if boss.type == "rare" then return "|cffbbbbff" .. boss.name .. "|r |cff888888(" .. L["rare"] .. ")|r" end
-	if boss.type == "extra" then return "|cffaaaaaa" .. boss.name .. "|r" end
-	return boss.name
-end
-
-function Guide:BuildTree()
-	local groups = { dungeon = {}, raid = {}, world = {} }
-	local order = 0
-	for key, entry in pairs(self:BuildList()) do
-		order = order + 1
-		local index = tonumber(key:sub(2)) or (1000 + order)
-		local text = EntryName(entry)
-		if entry.min and entry.kind ~= "world" then
-			text = text .. string.format(" |cff888888(%d-%d)|r", entry.min, entry.max)
-		end
-		if entry.isNew or entry.collected then text = text .. " |cff33ccff*|r" end
-		local node = { value = key, text = text, children = {}, entry = entry, index = index }
-		for i, boss in ipairs(self:Bosses(entry)) do
-			node.children[#node.children + 1] = { value = "b" .. i, text = BossLabel(boss) }
-		end
-		if entry.kind ~= "world" then
-			node.children[#node.children + 1] = { value = "trash", text = "|cffaaaaaa" .. L["Trash"] .. "|r" }
-		end
-		local group = groups[entry.kind] or groups.dungeon
-		group[#group + 1] = node
-	end
-	for _, group in pairs(groups) do
-		table.sort(group, SortNodes)
-		for _, node in ipairs(group) do node.entry, node.index = nil, nil end
-	end
-	local tree = {
-		{ value = "dungeons", text = L["Dungeons"], children = groups.dungeon },
-		{ value = "raids", text = L["Raids"], children = groups.raid },
-	}
-	-- World bosses: one entry, shown directly with its bosses.
-	if groups.world[1] then tree[#tree + 1] = groups.world[1] end
-	tree[#tree + 1] = { value = "wishlist", text = "|cffffd100" .. L["Wishlist"] .. "|r" }
-	return tree
-end
-
----------------------------------------------------------------------------
--- Item rows
----------------------------------------------------------------------------
-local function Percent(rate)
-	local color = rate >= 20 and "ff33ff33" or rate >= 5 and "ffffd100" or rate >= 1 and "ffff8844" or "ffff4444"
-	local fmt = rate >= 1 and "%.1f%%" or "%.2f%%"
-	return string.format("|c%s" .. fmt .. "|r", color, rate)
-end
-
--- Reference rate from the database, plus the rate measured by the collector when there is one.
-local function RateText(rate, measured, kills)
-	local parts = {}
-	if rate and rate >= 0 then
-		parts[#parts + 1] = Percent(rate)
-	elseif rate then
-		parts[#parts + 1] = "|cff888888?|r"
-	end
-	if measured and kills and kills > 0 then
-		parts[#parts + 1] = string.format("|cff888888%s %s (%d %s)|r", L["measured:"], Percent(measured), kills, L["kills"])
-	end
-	return table.concat(parts, "  ")
-end
-ns.DropRateText = RateText
-
-function Guide:AddItemRow(container, itemID, rateText)
-	local row = AceGUI:Create("InteractiveLabel")
-	row:SetFullWidth(true)
-	row:SetHighlight("Interface\\QuestFrame\\UI-QuestTitleHighlight")
-	local function Render()
-		local name, link, _, _, _, _, _, _, _, icon = C_Item.GetItemInfo(itemID)
-		local star = self:Global().wishlist[itemID] and "|TInterface\\COMMON\\FavoritesIcon:14|t " or ""
-		row:SetImage(icon or C_Item.GetItemIconByID(itemID))
-		row:SetImageSize(18, 18)
-		row:SetText(string.format("%s%s   %s", star, link or name or ("|cff888888" .. L["Item"] .. " #" .. itemID .. "|r"), rateText or ""))
-		return name ~= nil
-	end
-	if not Render() then
-		if C_Item.RequestLoadItemDataByID then C_Item.RequestLoadItemDataByID(itemID) end
-		self.pendingRows[#self.pendingRows + 1] = Render
-	end
-	row:SetCallback("OnEnter", function(widget)
-		GameTooltip:SetOwner(widget.frame, "ANCHOR_CURSOR")
-		GameTooltip:SetItemByID(itemID)
-		GameTooltip:AddLine(" ")
-		GameTooltip:AddLine(L["Shift-click: link in chat  |  Ctrl-click: try on  |  Alt-click: wishlist"], 0.6, 0.6, 0.6, true)
-		GameTooltip:Show()
-	end)
-	row:SetCallback("OnLeave", GameTooltip_Hide)
-	row:SetCallback("OnClick", function()
-		local _, link = C_Item.GetItemInfo(itemID)
-		if IsAltKeyDown() then
-			local wl = self:Global().wishlist
-			wl[itemID] = not wl[itemID] or nil
-			Render()
-		elseif IsControlKeyDown() and link then
-			DressUpItemLink(link)
-		elseif IsShiftKeyDown() and link then
-			local insert = ChatEdit_InsertLink or (ChatFrameUtil and ChatFrameUtil.InsertLink)
-			if insert then insert(link) end
-		end
-	end)
-	container:AddChild(row)
-end
-
-local function Heading(container, text)
-	local h = AceGUI:Create("Heading")
-	h:SetFullWidth(true)
-	h:SetText(text)
-	container:AddChild(h)
-end
-
-local function Text(container, text, font)
-	local label = AceGUI:Create("Label")
-	label:SetFullWidth(true)
-	if font then label:SetFontObject(font) end
-	label:SetText(text)
-	container:AddChild(label)
-	return label
-end
-
-local function MobInfo(mob)
-	local parts = {}
-	if mob.level then parts[#parts + 1] = L["Level"] .. " " .. mob.level end
-	if mob.hp then parts[#parts + 1] = string.format(L["%s HP"], ns.FormatNumber(mob.hp)) end
-	return table.concat(parts, "   ")
 end
 
 -- Loot list of a creature: database rates + measured rates + items only the collector saw.
@@ -208,7 +79,7 @@ function Guide:LootList(entry, mob)
 			seen[itemID] = true
 			local measured, kills
 			if entry.id and mob.npc then measured, kills = ns.DropRate(entry.id, mob.npc, itemID) end
-			list[#list + 1] = { itemID = itemID, rate = rate, measured = kills and kills > 0 and measured or nil, kills = kills }
+			list[#list + 1] = { itemID = itemID, rate = rate >= 0 and rate or nil, measured = kills and kills > 0 and measured or nil, kills = kills }
 		end
 	end
 	local data = entry.id and mob.npc and ns.CollectedInstances()[entry.id]
@@ -221,76 +92,13 @@ function Guide:LootList(entry, mob)
 			end
 		end
 	end
-	table.sort(list, function(a, b)
-		local ra, rb = a.rate or a.measured or 0, b.rate or b.measured or 0
-		return ra > rb
-	end)
+	table.sort(list, function(a, b) return (a.rate or a.measured or 0) > (b.rate or b.measured or 0) end)
 	return list
 end
 
-function Guide:WayButton(container, entry)
-	local where = entry.id and ns.Instances[entry.id]
-	if not where then return end
-	local go = AceGUI:Create("Button")
-	go:SetText(L["Show the way to the entrance"])
-	go:SetWidth(260)
-	go:SetCallback("OnClick", function()
-		ns.SetWaypoint(where.zone, where.x, where.y, EntryName(entry), "guide")
-		ns.Print(string.format(L["The arrow now points to %s (%s)."], EntryName(entry), ns.MapName(where.zone)))
-	end)
-	container:AddChild(go)
-end
-
----------------------------------------------------------------------------
--- Pages
----------------------------------------------------------------------------
-function Guide:ShowInstance(container, entry)
-	Text(container, EntryName(entry), GameFontNormalHuge)
-	local parts = {}
-	if entry.min and entry.kind ~= "world" then parts[#parts + 1] = string.format(L["Levels %d-%d"], entry.min, entry.max) end
-	if entry.enter and entry.kind ~= "world" then parts[#parts + 1] = string.format(L["Entry from level %d"], entry.enter) end
-	if entry.size then parts[#parts + 1] = string.format(L["%d players"], entry.size) end
-	local where = entry.id and ns.Instances[entry.id]
-	if where then parts[#parts + 1] = ns.MapName(where.zone) end
-	if entry.isNew then parts[#parts + 1] = "|cff33ccff" .. L["New in Forever"] .. "|r" end
-	Text(container, table.concat(parts, "  |  "), GameFontHighlight)
-	self:WayButton(container, entry)
-
-	Heading(container, L["Bosses"])
-	for _, boss in ipairs(self:Bosses(entry)) do
-		if boss.type ~= "extra" then
-			local count = boss.loot and #boss.loot / 2 or 0
-			Text(container, string.format("%s   |cff888888%s   %d %s|r", BossLabel(boss), MobInfo(boss), count, L["items"]))
-		end
-	end
-	if entry.collected then
-		Text(container, "|cff888888" .. L["This instance is not in the built-in database yet: what you see here was recorded by the drop collector."] .. "|r")
-	end
-	Text(container, "\n|cff888888" .. L["Select a boss on the left for its loot and drop rates, or Trash for the loot of normal monsters."] .. "|r")
-end
-
-function Guide:ShowBoss(container, entry, boss)
-	Text(container, BossLabel(boss), GameFontNormalHuge)
-	Text(container, EntryName(entry), GameFontHighlight)
-	local info = MobInfo(boss)
-	if info ~= "" then Text(container, info, GameFontHighlightLarge) end
-	if boss.kills then Text(container, string.format(L["Kills recorded: %d"], boss.kills)) end
-	self:WayButton(container, entry)
-	Heading(container, L["Loot"])
-	local list = self:LootList(entry, boss)
-	if #list == 0 then
-		Text(container, "|cff888888" .. L["No loot known yet. Kill this boss with the addon on and its loot will appear here."] .. "|r")
-	end
-	for _, item in ipairs(list) do
-		self:AddItemRow(container, item.itemID, RateText(item.rate, item.measured, item.kills))
-	end
-end
-
-function Guide:ShowTrash(container, entry)
-	Text(container, EntryName(entry) .. " - " .. L["Trash"], GameFontNormalHuge)
+function Guide:TrashMobs(entry)
 	local mobs = {}
 	for _, mob in ipairs(entry.trash or {}) do mobs[#mobs + 1] = mob end
-	-- Creatures only the collector saw.
 	local data = entry.id and ns.CollectedInstances()[entry.id]
 	if data then
 		local known = {}
@@ -302,106 +110,750 @@ function Guide:ShowTrash(container, entry)
 			end
 		end
 	end
-	if #mobs == 0 then
-		Text(container, "|cff888888" .. L["No trash loot recorded yet for this instance."] .. "|r")
-		return
+	return mobs
+end
+
+local function ItemCount(entry)
+	local n = 0
+	for _, boss in ipairs(entry.bosses or {}) do n = n + (boss.loot and #boss.loot / 2 or 0) end
+	return n
+end
+
+local function Percent(rate)
+	local c = rate >= 20 and C.good or rate >= 5 and C.warn or rate >= 1 and { 1, 0.55, 0.25 } or C.bad
+	return UI.Colorize(string.format(rate >= 1 and "%.1f%%" or "%.2f%%", rate), c), c
+end
+
+local function MobLine(mob)
+	local parts = {}
+	if mob.level then parts[#parts + 1] = L["Level"] .. " " .. mob.level end
+	if mob.hp then parts[#parts + 1] = string.format(L["%s HP"], ns.FormatNumber(mob.hp)) end
+	return table.concat(parts, "  ·  ")
+end
+
+---------------------------------------------------------------------------
+-- Widgets
+---------------------------------------------------------------------------
+local itemRows = UI.Pool(function(parent)
+	local row = CreateFrame("Button", nil, parent)
+	row:SetHeight(46)
+	row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	row.bg = UI.Fill(row, C.panel, "BACKGROUND")
+	row.bg:SetAllPoints()
+	row.icon = UI.ItemIcon(row, 36)
+	row.icon:SetPoint("LEFT", 6, 0)
+	row.name = UI.Text(row, 14)
+	row.name:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 10, -2)
+	row.name:SetPoint("RIGHT", row, "RIGHT", -150, 0)
+	row.name:SetWordWrap(false)
+	row.info = UI.Text(row, 12, C.muted)
+	row.info:SetPoint("BOTTOMLEFT", row.icon, "BOTTOMRIGHT", 10, 2)
+	row.info:SetPoint("RIGHT", row, "RIGHT", -150, 0)
+	row.info:SetWordWrap(false)
+	row.rate = UI.Text(row, 16, C.text, "RIGHT")
+	row.rate:SetPoint("TOPRIGHT", -12, -7)
+	row.barBg = UI.Fill(row, { 1, 1, 1, 0.07 }, "ARTWORK")
+	row.barBg:SetPoint("BOTTOMRIGHT", -12, 9)
+	row.barBg:SetSize(110, 4)
+	row.bar = UI.Fill(row, C.good, "OVERLAY")
+	row.bar:SetPoint("LEFT", row.barBg, "LEFT")
+	row.bar:SetHeight(4)
+	row.star = row:CreateTexture(nil, "OVERLAY")
+	row.star:SetTexture("Interface\\COMMON\\FavoritesIcon")
+	row.star:SetSize(20, 20)
+	row.star:SetPoint("RIGHT", row.rate, "LEFT", -6, 0)
+	row:SetScript("OnEnter", function(self)
+		self.bg:SetVertexColor(C.hover[1], C.hover[2], C.hover[3], 1)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:SetItemByID(self.itemID)
+		GameTooltip:AddLine(" ")
+		GameTooltip:AddLine(L["Shift-click: link in chat  |  Ctrl-click: try on  |  Alt-click: wishlist"], 0.6, 0.6, 0.6, true)
+		GameTooltip:Show()
+	end)
+	row:SetScript("OnLeave", function(self)
+		self.bg:SetVertexColor(C.panel[1], C.panel[2], C.panel[3], 1)
+		GameTooltip_Hide()
+	end)
+	row:SetScript("OnClick", function(self)
+		local _, link = C_Item.GetItemInfo(self.itemID)
+		if IsAltKeyDown() then
+			local wl = ns.FC:GetModule("DungeonGuide"):Global().wishlist
+			wl[self.itemID] = not wl[self.itemID] or nil
+			self:Refresh()
+		elseif IsControlKeyDown() and link then
+			DressUpItemLink(link)
+		elseif IsShiftKeyDown() and link then
+			local insert = ChatEdit_InsertLink or (ChatFrameUtil and ChatFrameUtil.InsertLink)
+			if insert then insert(link) end
+		end
+	end)
+	function row:Refresh()
+		local itemID = self.itemID
+		local name, _, quality, _, _, itemType, subType, _, equipLoc, icon = C_Item.GetItemInfo(itemID)
+		if not icon and C_Item.GetItemInfoInstant then
+			local _, t, st, el, ic = C_Item.GetItemInfoInstant(itemID)
+			itemType, subType, equipLoc, icon = t, st, el, ic
+		end
+		self.icon:SetItem(icon, quality)
+		if name then
+			local color = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality or 1]
+			self.name:SetText(color and color.hex and (color.hex .. name .. "|r") or name)
+		else
+			self.name:SetText(UI.Colorize(L["Item"] .. " #" .. itemID, C.muted))
+		end
+		local info = {}
+		if equipLoc and equipLoc ~= "" and type(_G[equipLoc]) == "string" then info[#info + 1] = _G[equipLoc] end
+		if subType and subType ~= "" and subType ~= info[1] then info[#info + 1] = subType elseif itemType then info[#info + 1] = itemType end
+		if self.extra then info[#info + 1] = self.extra end
+		self.info:SetText(table.concat(info, "  ·  "))
+		self.star:SetShown(ns.FC:GetModule("DungeonGuide"):Global().wishlist[itemID] == true)
+		return name ~= nil
 	end
-	Text(container, "|cff888888" .. string.format(L["%d monsters. Items shown from the quality chosen in the options."], #mobs) .. "|r")
-	local minQuality = self:Settings().minTrashQuality
-	for _, mob in ipairs(mobs) do
-		Heading(container, string.format("%s  |cff888888%s|r", mob.name, MobInfo(mob)))
-		local shown = 0
-		for _, item in ipairs(self:LootList(entry, mob)) do
-			local quality = C_Item.GetItemQualityByID(item.itemID)
-			if not quality or quality >= minQuality then
-				self:AddItemRow(container, item.itemID, RateText(item.rate, item.measured, item.kills))
-				shown = shown + 1
+	function row:SetData(item, extra)
+		self.itemID, self.extra = item.itemID, extra
+		local rate = item.rate or item.measured
+		if rate then
+			local text, color = Percent(rate)
+			self.rate:SetText(text)
+			self.bar:SetVertexColor(color[1], color[2], color[3], 1)
+			self.bar:SetWidth(math.max(2, 110 * math.min(1, math.sqrt(rate / 100))))
+			self.bar:Show() self.barBg:Show()
+		else
+			self.rate:SetText(UI.Colorize("?", C.muted))
+			self.bar:Hide() self.barBg:Hide()
+		end
+		if item.measured and item.kills and item.kills > 0 and item.rate then
+			self.extra = (extra and extra .. "  ·  " or "") .. string.format("%s %.1f%% (%d %s)", L["measured:"], item.measured, item.kills, L["kills"])
+		end
+		if not self:Refresh() then
+			if C_Item.RequestLoadItemDataByID then C_Item.RequestLoadItemDataByID(self.itemID) end
+			ns.FC:GetModule("DungeonGuide").pending = true
+		end
+	end
+	return row
+end)
+
+local textBlocks = UI.Pool(function(parent)
+	local f = CreateFrame("Frame", nil, parent)
+	f.text = UI.Text(f, 13)
+	f.text:SetPoint("TOPLEFT")
+	f.text:SetPoint("TOPRIGHT")
+	function f:Set(text, size, color)
+		self.text:SetFontObject(UI.Font(size or 13))
+		local c = color or C.text
+		self.text:SetTextColor(c[1], c[2], c[3])
+		self.text:SetText(text)
+		self:SetHeight(math.max(1, self.text:GetStringHeight()))
+	end
+	return f
+end)
+
+local sections = UI.Pool(function(parent) return UI.SectionTitle(parent, "") end)
+
+-- Clickable card (bosses, trash, suggested dungeons).
+local cards = UI.Pool(function(parent)
+	local card = CreateFrame("Button", nil, parent, "BackdropTemplate")
+	UI.Backdrop(card, C.panel, C.border)
+	card:SetHeight(70)
+	card.title = UI.Text(card, 15, C.gold)
+	card.title:SetPoint("TOPLEFT", 12, -14)
+	card.title:SetPoint("RIGHT", -104, 0)
+	card.title:SetWordWrap(false)
+	card.sub = UI.Text(card, 12, C.muted)
+	card.sub:SetPoint("TOPLEFT", card.title, "BOTTOMLEFT", 0, -7)
+	card.sub:SetPoint("RIGHT", -104, 0)
+	card.sub:SetWordWrap(false)
+	card.icons = {}
+	for i = 1, 3 do
+		local icon = UI.ItemIcon(card, 26)
+		icon:SetPoint("RIGHT", -10 - (i - 1) * 30, 0)
+		card.icons[i] = icon
+	end
+	card:SetScript("OnEnter", function(self) self:SetBackdropBorderColor(C.accent[1], C.accent[2], C.accent[3], 1) self:SetBackdropColor(C.panel2[1], C.panel2[2], C.panel2[3], 1) end)
+	card:SetScript("OnLeave", function(self) self:SetBackdropBorderColor(C.border[1], C.border[2], C.border[3], 1) self:SetBackdropColor(C.panel[1], C.panel[2], C.panel[3], 1) end)
+	function card:Set(title, sub, items, onClick, titleColor)
+		self.title:SetText(title)
+		local c = titleColor or C.gold
+		self.title:SetTextColor(c[1], c[2], c[3])
+		self.sub:SetText(sub or "")
+		for i = 1, 3 do
+			local itemID = items and items[i]
+			if itemID then
+				local _, _, quality, _, _, _, _, _, _, icon = C_Item.GetItemInfo(itemID)
+				if not icon and C_Item.GetItemInfoInstant then icon = select(5, C_Item.GetItemInfoInstant(itemID)) end
+				self.icons[i]:SetItem(icon, quality)
+				self.icons[i]:Show()
+			else
+				self.icons[i]:Hide()
 			end
 		end
-		if shown == 0 then Text(container, "|cff888888" .. L["Nothing above the chosen quality."] .. "|r") end
+		self:SetScript("OnClick", onClick)
+	end
+	return card
+end)
+
+---------------------------------------------------------------------------
+-- Window
+---------------------------------------------------------------------------
+function Guide:CreateWindow()
+	if self.frame then return end
+	local f = UI.Window("ForeverCompanionGuide", L["Dungeon & raid guide"], 1060, 700, self:Global().window,
+		{ resizable = true, minWidth = 860, minHeight = 520 })
+	self.frame = f
+	f.OnResized = function() self:Render() end
+
+	-- Sidebar
+	local side = CreateFrame("Frame", nil, f.content, "BackdropTemplate")
+	side:SetPoint("TOPLEFT", 0, 0)
+	side:SetPoint("BOTTOMLEFT", 0, 0)
+	side:SetWidth(SIDEBAR_WIDTH)
+	UI.Backdrop(side, C.panel, { 0, 0, 0, 0 })
+	local edge = UI.Separator(side)
+	edge:SetPoint("TOPRIGHT")
+	edge:SetPoint("BOTTOMRIGHT")
+	edge:SetWidth(1)
+
+	local search = UI.EditBox(side, SIDEBAR_WIDTH - 24, 30, L["Search a dungeon, boss or item"])
+	search:SetPoint("TOPLEFT", 12, -12)
+	search:HookScript("OnTextChanged", function(box)
+		self.filter = box:GetText():lower()
+		if self.filter == "" then self.filter = nil end
+		self:RenderNav()
+	end)
+	self.search = search
+
+	local nav = UI.Scroll(side)
+	nav:SetPoint("TOPLEFT", 6, -52)
+	nav:SetPoint("BOTTOMRIGHT", -2, 6)
+	self.nav = nav
+
+	-- Content
+	local main = UI.Scroll(f.content)
+	main:SetPoint("TOPLEFT", side, "TOPRIGHT", 0, -2)
+	main:SetPoint("BOTTOMRIGHT", -4, 4)
+	self.main = main
+	self.stack = UI.Stack(main.child, 22)
+
+	-- Hero header used by every page.
+	local hero = CreateFrame("Frame", nil, main.child, "BackdropTemplate")
+	UI.Backdrop(hero, C.panel, C.border)
+	local glow = hero:CreateTexture(nil, "BACKGROUND", nil, 1)
+	glow:SetPoint("TOPLEFT", 1, -1)
+	glow:SetPoint("BOTTOMRIGHT", -1, 1)
+	UI.Gradient(glow, { 0.06, 0.20, 0.28, 0.9 }, { 0.05, 0.06, 0.09, 0.9 })
+	hero.model = CreateFrame("PlayerModel", nil, hero)
+	hero.model:SetPoint("TOPLEFT", 6, -6)
+	hero.model:SetPoint("BOTTOMLEFT", 6, 6)
+	hero.model:SetWidth(190)
+	hero.model:EnableMouse(true)
+	hero.model:SetScript("OnMouseDown", function(m) m.dragX = GetCursorPosition() end)
+	hero.model:SetScript("OnMouseUp", function(m) m.dragX = nil end)
+	hero.model:SetScript("OnUpdate", function(m)
+		if m.dragX then
+			local x = GetCursorPosition()
+			m.facing = (m.facing or 0) + (x - m.dragX) / 80
+			m.dragX = x
+			m:SetFacing(m.facing)
+		end
+	end)
+	hero.badgeFrame = UI.ItemIcon(hero, 76)
+	hero.badgeFrame:SetPoint("LEFT", 22, 0)
+	hero.title = UI.Text(hero, 26, C.gold)
+	hero.title:SetWordWrap(false)
+	hero.sub = UI.Text(hero, 14, C.muted)
+	hero.sub:SetPoint("TOPLEFT", hero.title, "BOTTOMLEFT", 0, -6)
+	hero.sub:SetPoint("RIGHT", -20, 0)
+	hero.chips = {}
+	for i = 1, 5 do hero.chips[i] = UI.Chip(hero, 13) end
+	hero.go = UI.Button(hero, L["Show the way to the entrance"], 250, 30, "accent")
+	hero.go:SetPoint("BOTTOMRIGHT", -14, 14)
+	self.hero = hero
+	hero:Hide()
+
+	f:SetScript("OnShow", function() PlaySound(SOUNDKIT.IG_SPELLBOOK_OPEN or 829) end)
+	f:SetScript("OnHide", function() PlaySound(SOUNDKIT.IG_SPELLBOOK_CLOSE or 830) end)
+end
+
+-- Fills the hero header. opts: { title, sub, chips = { {text, color} }, npc, badge, way = entry, height }
+function Guide:SetHero(opts)
+	local hero = self.hero
+	hero:Show()
+	local showModel = opts.npc and self:Settings().showModels and true or false
+	if showModel then
+		hero.model:Show()
+		if hero.model.ClearModel then hero.model:ClearModel() end
+		if not pcall(hero.model.SetCreature, hero.model, opts.npc) then showModel = false end
+		hero.model.facing = 0.4
+		hero.model:SetFacing(0.4)
+	end
+	hero.model:SetShown(showModel)
+	hero.badgeFrame:SetShown(not showModel and opts.badge ~= nil)
+	if opts.badge then hero.badgeFrame:SetItem(opts.badge) end
+	local left = showModel and 214 or (opts.badge and 116 or 24)
+	hero.title:ClearAllPoints()
+	hero.title:SetPoint("TOPLEFT", left, -24)
+	hero.title:SetPoint("RIGHT", -20, 0)
+	hero.title:SetText(opts.title)
+	hero.sub:SetText(opts.sub or "")
+	local prev
+	for i, chip in ipairs(hero.chips) do
+		local data = opts.chips and opts.chips[i]
+		if data then
+			chip:Set(data[1], data[2])
+			chip:ClearAllPoints()
+			if prev then chip:SetPoint("LEFT", prev, "RIGHT", 6, 0) else chip:SetPoint("TOPLEFT", hero.sub, "BOTTOMLEFT", 0, -12) end
+			chip:Show()
+			prev = chip
+		else
+			chip:Hide()
+		end
+	end
+	local where = opts.way and opts.way.id and ns.Instances[opts.way.id]
+	hero.go:SetShown(where ~= nil)
+	if where then
+		hero.go:SetScript("OnClick", function()
+			ns.SetWaypoint(where.zone, where.x, where.y, EntryName(opts.way), "guide")
+			ns.Print(string.format(L["The arrow now points to %s (%s)."], EntryName(opts.way), ns.MapName(where.zone)))
+			PlaySound(SOUNDKIT.MAP_PING or 3175)
+		end)
+	end
+	self.stack:Add(hero, opts.height or (showModel and 210 or 136))
+end
+
+---------------------------------------------------------------------------
+-- Sidebar navigation
+---------------------------------------------------------------------------
+local navRows = UI.Pool(function(parent)
+	local row = CreateFrame("Button", nil, parent)
+	row:SetHeight(28)
+	row.bg = UI.Fill(row, { 1, 1, 1, 0 }, "BACKGROUND")
+	row.bg:SetAllPoints()
+	row.mark = UI.Fill(row, C.accent, "ARTWORK")
+	row.mark:SetPoint("TOPLEFT")
+	row.mark:SetPoint("BOTTOMLEFT")
+	row.mark:SetWidth(3)
+	row.expand = UI.Text(row, 14, C.muted, "CENTER")
+	row.expand:SetPoint("LEFT", 4, 0)
+	row.expand:SetWidth(14)
+	row.text = UI.Text(row, 13)
+	row.text:SetWordWrap(false)
+	row.chip = UI.Chip(row, 11)
+	row.chip:SetPoint("RIGHT", -8, 0)
+	row:SetScript("OnEnter", function(self) if not self.selected then self.bg:SetVertexColor(1, 1, 1, 0.05) end end)
+	row:SetScript("OnLeave", function(self) if not self.selected then self.bg:SetVertexColor(1, 1, 1, 0) end end)
+	return row
+end)
+
+local CATEGORIES = {
+	{ key = "dungeon", label = "Dungeons" },
+	{ key = "raid", label = "Raids" },
+	{ key = "world", label = "World bosses" },
+}
+
+local function Matches(filter, text)
+	return type(text) == "string" and text:lower():find(filter, 1, true) ~= nil
+end
+
+-- Does the instance match the search? Second return: the bosses that match (nil = all).
+function Guide:MatchEntry(entry)
+	local filter = self.filter
+	if not filter then return true, nil end
+	local whole = Matches(filter, EntryName(entry))
+	local bosses = {}
+	local any = whole
+	for i, boss in ipairs(self:Bosses(entry)) do
+		local hit = Matches(filter, boss.name)
+		if not hit then
+			local loot = boss.loot or {}
+			for j = 1, #loot, 2 do
+				if Matches(filter, C_Item.GetItemNameByID and C_Item.GetItemNameByID(loot[j])) then hit = true break end
+			end
+		end
+		if hit then bosses[i] = true any = true end
+	end
+	return any, (not whole) and bosses or nil
+end
+
+function Guide:RenderNav()
+	if not self.frame then return end
+	navRows:ReleaseAll()
+	local child = self.nav.child
+	local y = 0
+	local collapsed = self:Global().collapsed
+	local function Row(indent, height, size, color)
+		local row = navRows:Acquire(child)
+		row:SetHeight(height or 28)
+		row:SetPoint("TOPLEFT", child, "TOPLEFT", 0, -y)
+		row:SetPoint("RIGHT", child, "RIGHT", 0, 0)
+		row.text:ClearAllPoints()
+		row.text:SetPoint("LEFT", 20 + indent, 0)
+		row.text:SetPoint("RIGHT", row.chip, "LEFT", -6, 0)
+		row.text:SetFontObject(UI.Font(size or 13))
+		local c = color or C.text
+		row.text:SetTextColor(c[1], c[2], c[3])
+		row.selected = false
+		row.bg:SetVertexColor(1, 1, 1, 0)
+		row.mark:Hide()
+		row.chip:Hide()
+		row.expand:SetText("")
+		y = y + (height or 28)
+		return row
+	end
+	local function Select(row, path)
+		if self.path == path then
+			row.selected = true
+			row.bg:SetVertexColor(C.accent[1], C.accent[2], C.accent[3], 0.14)
+			row.mark:Show()
+		end
+		row:SetScript("OnClick", function() self:Open(path) end)
+	end
+
+	local home = Row(0, 30, 14)
+	home.text:SetText(L["Home"])
+	Select(home, "home")
+
+	for _, cat in ipairs(CATEGORIES) do
+		local keys = {}
+		for _, key in ipairs(self.order) do
+			local entry = self.list[key]
+			local kind = (entry.kind == "raid" or entry.kind == "world") and entry.kind or "dungeon"
+			if kind == cat.key and self:MatchEntry(entry) then keys[#keys + 1] = key end
+		end
+		if #keys > 0 then
+			y = y + 8
+			local isCollapsed = collapsed[cat.key] and not self.filter
+			local head = Row(0, 30, 13, C.accent)
+			head.text:SetText(L[cat.label] .. UI.Colorize("  " .. #keys, C.muted))
+			head.expand:SetText(isCollapsed and "+" or "–")
+			head:SetScript("OnClick", function()
+				collapsed[cat.key] = not collapsed[cat.key] or nil
+				self:RenderNav()
+			end)
+			if not isCollapsed then
+				for _, key in ipairs(keys) do
+					local entry = self.list[key]
+					local row = Row(0)
+					row.text:SetText(EntryName(entry) .. ((entry.isNew or entry.collected) and UI.Colorize(" *", C.accent) or ""))
+					if entry.min and entry.kind ~= "world" then
+						row.chip:Set(entry.min == entry.max and tostring(entry.min) or (entry.min .. "-" .. entry.max), UI.LevelColor(entry.min, entry.max))
+						row.chip:Show()
+					end
+					local open = self.expanded == key or self.filter ~= nil
+					row.expand:SetText(open and "–" or "+")
+					Select(row, key)
+					if open then
+						local _, bossFilter = self:MatchEntry(entry)
+						for i, boss in ipairs(self:Bosses(entry)) do
+							if not bossFilter or bossFilter[i] then
+								local color = boss.type == "rare" and { 0.75, 0.75, 1 } or boss.type == "extra" and C.muted or { 0.85, 0.87, 0.92 }
+								local b = Row(14, 24, 12, color)
+								b.text:SetText(boss.name)
+								Select(b, key .. ">b" .. i)
+							end
+						end
+						if entry.kind ~= "world" and not self.filter then
+							local t = Row(14, 24, 12, C.muted)
+							t.text:SetText(L["Trash"])
+							Select(t, key .. ">trash")
+						end
+					end
+				end
+			end
+		end
+	end
+
+	y = y + 8
+	local count = 0
+	for _ in pairs(self:Global().wishlist) do count = count + 1 end
+	local wish = Row(0, 30, 13, C.gold)
+	wish.text:SetText(L["Wishlist"] .. UI.Colorize("  " .. count, C.muted))
+	Select(wish, "wishlist")
+	self.nav:SetContentHeight(y + 8)
+end
+
+---------------------------------------------------------------------------
+-- Pages
+---------------------------------------------------------------------------
+function Guide:Clear()
+	itemRows:ReleaseAll()
+	textBlocks:ReleaseAll()
+	sections:ReleaseAll()
+	cards:ReleaseAll()
+	self.hero:Hide()
+	self.stack:Reset()
+	self.stack:Space(18)
+	self.pending = false
+end
+
+function Guide:AddText(text, size, color, gap)
+	local block = textBlocks:Acquire(self.main.child)
+	self.stack:Add(block, 10, gap or 6)
+	block:Set(text, size, color)
+	self.stack.y = self.stack.y - 10 + block:GetHeight()
+	return block
+end
+
+function Guide:AddSection(text, gap)
+	local s = sections:Acquire(self.main.child)
+	s:SetText(text)
+	self.stack:Add(s, 28, gap or 18)
+	self.stack:Space(8)
+end
+
+function Guide:AddItems(list, filter)
+	local shown = 0
+	for _, item in ipairs(list) do
+		if not filter or filter(item) then
+			local row = itemRows:Acquire(self.main.child)
+			self.stack:Add(row, 46, shown > 0 and 4 or 0)
+			row:SetData(item)
+			shown = shown + 1
+		end
+	end
+	return shown
+end
+
+-- Cards in a grid (two or three columns depending on width).
+function Guide:AddCards(list)
+	local width = self.main.child:GetWidth() - 44
+	local columns = width > 780 and 3 or 2
+	local gap = 10
+	local w = (width - gap * (columns - 1)) / columns
+	local startY = self.stack.y
+	for i, data in ipairs(list) do
+		local card = cards:Acquire(self.main.child)
+		local col = (i - 1) % columns
+		local line = math.floor((i - 1) / columns)
+		card:SetSize(w, 70)
+		card:SetPoint("TOPLEFT", self.main.child, "TOPLEFT", 22 + col * (w + gap), -(startY + line * 80))
+		card:Set(data.title, data.sub, data.items, data.onClick, data.color)
+	end
+	self.stack.y = startY + math.ceil(#list / columns) * 80
+end
+
+-- The three best items of a boss (highest quality first), shown on its card.
+local function TopItems(boss)
+	local ranked, loot = {}, boss.loot or {}
+	for i = 1, #loot, 2 do
+		ranked[#ranked + 1] = { loot[i], C_Item.GetItemQualityByID(loot[i]) or 2 }
+	end
+	table.sort(ranked, function(a, b) return a[2] > b[2] end)
+	local items = {}
+	for i = 1, math.min(3, #ranked) do items[i] = ranked[i][1] end
+	return items
+end
+
+function Guide:PageHome()
+	local total, bosses, items = 0, 0, 0
+	for _, key in ipairs(self.order) do
+		local entry = self.list[key]
+		total = total + 1
+		bosses = bosses + #self:Bosses(entry)
+		items = items + ItemCount(entry)
+	end
+	self:SetHero({
+		title = L["Dungeon & raid guide"],
+		sub = L["Every dungeon and raid of WoW Forever, with the loot of each boss and of the trash, and how often each item drops."],
+		badge = UI.MEDIA .. "Logo",
+		chips = {
+			{ string.format(L["%d instances"], total), C.accent },
+			{ string.format(L["%d bosses"], bosses), C.gold },
+			{ string.format(L["%d items"], items), C.good },
+		},
+		height = 140,
+	})
+	local level = UnitLevel("player")
+	local suggested = {}
+	for _, key in ipairs(self.order) do
+		local entry = self.list[key]
+		if entry.min and entry.kind ~= "world" and level >= entry.min - 3 and level <= entry.max then
+			local list = entry.bosses or {}
+			suggested[#suggested + 1] = {
+				title = EntryName(entry),
+				sub = string.format(L["Levels %d-%d"], entry.min, entry.max) .. "  ·  " .. string.format(L["%d bosses"], #self:Bosses(entry)),
+				items = TopItems(list[#list] or {}),
+				color = UI.LevelColor(entry.min, entry.max),
+				onClick = function() self:Open(key) end,
+			}
+		end
+	end
+	if #suggested > 0 then
+		self:AddSection(string.format(L["For your level (%d)"], level))
+		self:AddCards(suggested)
+	end
+	self:AddSection(L["How to use"])
+	self:AddText(L["Pick an instance on the left, then a boss for its loot or Trash for the loot of normal monsters. The search box finds dungeons, bosses and items."], 13, C.text)
+	self:AddText(L["Shift-click: link in chat  |  Ctrl-click: try on  |  Alt-click: wishlist"], 12, C.muted, 8)
+	self:AddSection(L["Where the numbers come from"])
+	self:AddText(L["Bosses, health, loot and drop rates come from the Classic database (AtlasLootClassic and CMaNGOS). Rates measured in game by the addon are shown next to them. Forever may change some of them: share your data with /fc drops export."], 12, C.muted)
+end
+
+function Guide:PageInstance(key, entry)
+	local chips = {}
+	if entry.min and entry.kind ~= "world" then chips[#chips + 1] = { string.format(L["Levels %d-%d"], entry.min, entry.max), UI.LevelColor(entry.min, entry.max) } end
+	if entry.size then chips[#chips + 1] = { string.format(L["%d players"], entry.size), C.text } end
+	if entry.enter and entry.kind ~= "world" then chips[#chips + 1] = { string.format(L["Entry from level %d"], entry.enter), C.muted } end
+	if entry.isNew then chips[#chips + 1] = { L["New in Forever"], C.accent } end
+	local where = entry.id and ns.Instances[entry.id]
+	self:SetHero({
+		title = EntryName(entry),
+		sub = where and ns.MapName(where.zone) or (entry.kind == "world" and L["Outdoors"] or ""),
+		badge = entry.kind == "raid" and "Interface\\Icons\\INV_Misc_Head_Dragon_01" or entry.kind == "world" and "Interface\\Icons\\INV_Misc_Head_Dragon_Green" or "Interface\\Icons\\INV_Misc_Bone_HumanSkull_01",
+		chips = chips,
+		way = entry,
+		height = 140,
+	})
+	local list = {}
+	for i, boss in ipairs(self:Bosses(entry)) do
+		local count = boss.loot and #boss.loot / 2 or 0
+		local sub = MobLine(boss)
+		if boss.type == "extra" then
+			sub = string.format("%d %s", count, L["items"])
+		elseif count > 0 then
+			sub = sub .. "  ·  " .. string.format("%d %s", count, L["items"])
+		end
+		list[#list + 1] = {
+			title = boss.name .. (boss.type == "rare" and UI.Colorize("  " .. L["rare"], { 0.75, 0.75, 1 }) or ""),
+			sub = sub,
+			items = TopItems(boss),
+			color = boss.type == "extra" and C.text or C.gold,
+			onClick = function() self:Open(key .. ">b" .. i) end,
+		}
+	end
+	if entry.kind ~= "world" then
+		list[#list + 1] = {
+			title = L["Trash"],
+			sub = string.format(L["%d monsters"], #self:TrashMobs(entry)),
+			color = C.muted,
+			onClick = function() self:Open(key .. ">trash") end,
+		}
+	end
+	self:AddSection(L["Bosses"])
+	self:AddCards(list)
+	if entry.collected then
+		self:AddText(L["This instance is not in the built-in database yet: what you see here was recorded by the drop collector."], 12, C.muted, 14)
 	end
 end
 
-function Guide:ShowWishlist(container)
-	Text(container, L["Wishlist"], GameFontNormalHuge)
-	Text(container, "|cff888888" .. L["Alt-click an item in the guide to add or remove it. You are alerted when it drops."] .. "|r")
+function Guide:PageBoss(key, entry, boss)
+	local chips = {}
+	if boss.level then chips[#chips + 1] = { L["Level"] .. " " .. boss.level, C.gold } end
+	if boss.hp then chips[#chips + 1] = { string.format(L["%s HP"], ns.FormatNumber(boss.hp)), C.good } end
+	if boss.type == "rare" then chips[#chips + 1] = { L["rare"], { 0.75, 0.75, 1 } } end
+	if boss.kills then chips[#chips + 1] = { string.format(L["Kills recorded: %d"], boss.kills), C.muted } end
+	self:SetHero({
+		title = boss.name,
+		sub = EntryName(entry),
+		npc = boss.type ~= "extra" and boss.npc or nil,
+		badge = "Interface\\Icons\\INV_Misc_Bag_10",
+		chips = chips,
+		way = entry,
+	})
+	local list = self:LootList(entry, boss)
+	self:AddSection(string.format("%s  (%d)", L["Loot"], #list))
+	if #list == 0 then
+		self:AddText(L["No loot known yet. Kill this boss with the addon on and its loot will appear here."], 13, C.muted)
+	end
+	self:AddItems(list)
+end
+
+function Guide:PageTrash(key, entry)
+	local mobs = self:TrashMobs(entry)
+	local qualityNames = { [0] = ITEM_QUALITY0_DESC, ITEM_QUALITY1_DESC, ITEM_QUALITY2_DESC, ITEM_QUALITY3_DESC, ITEM_QUALITY4_DESC }
+	self:SetHero({
+		title = EntryName(entry) .. " · " .. L["Trash"],
+		sub = string.format(L["%d monsters"], #mobs),
+		badge = "Interface\\Icons\\INV_Misc_Bone_ElfSkull_01",
+		chips = { { L["Items shown from:"] .. " " .. (qualityNames[self:Settings().minTrashQuality] or "?"), C.muted } },
+		way = entry,
+		height = 136,
+	})
+	if #mobs == 0 then
+		self:AddText(L["No trash loot recorded yet for this instance."], 13, C.muted, 12)
+		return
+	end
+	local minQuality = self:Settings().minTrashQuality
+	local function filter(item)
+		local quality = C_Item.GetItemQualityByID(item.itemID)
+		return not quality or quality >= minQuality
+	end
+	for _, mob in ipairs(mobs) do
+		self:AddSection(mob.name .. "   " .. UI.Colorize(MobLine(mob), C.muted))
+		if self:AddItems(self:LootList(entry, mob), filter) == 0 then
+			self:AddText(L["Nothing above the chosen quality."], 12, C.muted)
+		end
+	end
+end
+
+function Guide:PageWishlist()
+	local count = 0
+	for _ in pairs(self:Global().wishlist) do count = count + 1 end
+	self:SetHero({
+		title = L["Wishlist"],
+		sub = L["Alt-click an item in the guide to add or remove it. You are alerted when it drops."],
+		badge = "Interface\\Icons\\INV_Misc_Note_02",
+		chips = { { string.format(L["%d items"], count), C.gold } },
+		height = 136,
+	})
+	self:AddSection(L["Items"])
 	for itemID in pairs(self:Global().wishlist) do
 		local src = ns.ItemDropSources(itemID)[1]
-		self:AddItemRow(container, itemID, src and string.format("%s - %s  %s", src.where, src.name, src.rate and Percent(src.rate) or "") or "")
+		local row = itemRows:Acquire(self.main.child)
+		self.stack:Add(row, 46, 4)
+		row:SetData({ itemID = itemID, rate = src and src.rate }, src and (src.name .. " - " .. src.where) or nil)
 	end
+	if count == 0 then self:AddText(L["Nothing yet."], 13, C.muted) end
 end
 
-function Guide:Select(path)
-	local content = self.content
-	content:ReleaseChildren()
-	self.pendingRows = {}
-	local key, sub = path:match("([kc]%d+)" .. SEP .. "?([^" .. SEP .. "]*)$")
-	if path:find("wishlist", 1, true) then
-		self:ShowWishlist(content)
-	elseif key then
-		local entry = self.list[key]
-		if not entry then return end
-		if sub == "trash" then
-			self:ShowTrash(content, entry)
-		elseif sub and sub:match("^b%d+$") then
-			local boss = self:Bosses(entry)[tonumber(sub:sub(2))]
-			if boss then self:ShowBoss(content, entry, boss) end
-		else
-			self:ShowInstance(content, entry)
-		end
+-- path: "home", "wishlist", "k3", "k3>b2", "k3>trash"
+function Guide:Open(path)
+	self.path = path
+	local key = path:match("^([kc]%d+)")
+	if key then self.expanded = key end
+	self.main:ScrollToTop()
+	self:Render()
+	self:RenderNav()
+end
+
+function Guide:Render()
+	if not self.frame then return end
+	self:Clear()
+	local path = self.path or "home"
+	local key, sub = path:match("^([kc]%d+)>?(.*)$")
+	local entry = key and self.list[key]
+	if path == "wishlist" then
+		self:PageWishlist()
+	elseif entry and sub == "trash" then
+		self:PageTrash(key, entry)
+	elseif entry and sub:match("^b%d+$") then
+		local boss = self:Bosses(entry)[tonumber(sub:sub(2))]
+		if boss then self:PageBoss(key, entry, boss) else self:PageInstance(key, entry) end
+	elseif entry then
+		self:PageInstance(key, entry)
 	else
-		Text(content, L["Dungeon & raid guide"], GameFontNormalHuge)
-		Text(content, L["Every dungeon and raid of WoW Forever, with the loot of each boss and of the trash, and how often each item drops."])
-		Text(content, "\n" .. L["Bosses, health, loot and drop rates come from the Classic database (AtlasLootClassic and CMaNGOS). Rates measured in game by the addon are shown next to them. Forever may change some of them: share your data with /fc drops export."])
+		self:PageHome()
 	end
-	content:DoLayout()
+	self.main:SetContentHeight(self.stack.y + 24)
+	self.frame.subtitle:SetText(entry and EntryName(entry) or "")
 end
 
 function Guide:Toggle()
-	if self.frame then
-		self.frame:Hide() -- fires OnClose, which releases it
+	self:CreateWindow()
+	if self.frame:IsShown() then
+		self.frame:Hide()
 		return
 	end
-	local frame = AceGUI:Create("Frame")
-	self.frame = frame
-	frame:SetTitle(ns.TAG .. " - " .. L["Dungeon & raid guide"])
-	frame:SetLayout("Fill")
-	frame:SetWidth(860)
-	frame:SetHeight(600)
-	frame:SetStatusText(L["Rates: Classic database, plus what the addon measured in game. Share yours with /fc drops export."])
-	frame:SetCallback("OnClose", function(widget)
-		AceGUI:Release(widget)
-		self.frame, self.content = nil, nil
-	end)
-
-	local tree = AceGUI:Create("TreeGroup")
-	tree:SetLayout("Fill")
-	tree:SetTree(self:BuildTree())
-	tree:SetTreeWidth(260, true)
-	frame:AddChild(tree)
-
-	local scroll = AceGUI:Create("ScrollFrame")
-	scroll:SetLayout("List")
-	tree:AddChild(scroll)
-	self.content = scroll
-
-	tree:SetCallback("OnGroupSelected", function(_, _, path)
-		self.path = path
-		self:Select(path)
-	end)
+	self:BuildList()
+	self.frame:Show()
 	-- Open on the instance you are in, if any.
 	local _, instanceType, _, _, _, _, _, instanceID = GetInstanceInfo()
 	local found
 	if instanceType == "party" or instanceType == "raid" then
-		for key, entry in pairs(self.list) do
-			if entry.id == instanceID and (not found or key < found) then found = key end
+		for _, key in ipairs(self.order) do
+			if self.list[key].id == instanceID then found = key break end
 		end
 	end
-	if found then
-		tree:SelectByPath(self.list[found].kind == "raid" and "raids" or "dungeons", found)
-	else
-		self:Select("")
-	end
+	self:Open(found or self.path or "home")
 end
 
 function ns.ToggleDungeonGuide()
@@ -409,7 +861,7 @@ function ns.ToggleDungeonGuide()
 end
 
 ---------------------------------------------------------------------------
--- Wishlist alert
+-- Events
 ---------------------------------------------------------------------------
 function Guide:LOOT_OPENED()
 	if not self:Settings().wishlistAlert then return end
@@ -425,16 +877,15 @@ end
 
 function Guide:GET_ITEM_INFO_RECEIVED()
 	-- Item names arrive from the server after the page is drawn: fill the rows in place.
-	if not self.content or not self.pendingRows or #self.pendingRows == 0 or self.renderPending then return end
+	if not (self.frame and self.frame:IsShown() and self.pending) or self.renderPending then return end
 	self.renderPending = true
-	C_Timer.After(0.2, function()
+	C_Timer.After(0.25, function()
 		self.renderPending = false
-		if not self.content then return end
-		local still = {}
-		for _, render in ipairs(self.pendingRows) do
-			if not render() then still[#still + 1] = render end
+		local still = false
+		for _, row in ipairs(itemRows.used) do
+			if not row:Refresh() then still = true end
 		end
-		self.pendingRows = still
+		self.pending = still
 	end)
 end
 
@@ -450,14 +901,15 @@ end
 ns.RegisterCommand("guide", L["open the dungeon & raid guide"], function() ns.ToggleDungeonGuide() end)
 
 function Guide:GetOptions()
-	local get, set = ns.ProfileAccessors("DungeonGuide")
+	local get, set = ns.ProfileAccessors("DungeonGuide", function() if self.frame and self.frame:IsShown() then self:Render() end end)
 	return {
 		get = get, set = set,
 		args = {
 			open = { type = "execute", order = 1, name = L["Open the guide"], func = function() self:Toggle() end },
 			wishlistAlert = { type = "toggle", order = 2, width = "full", name = L["Alert me when a wishlist item drops"] },
+			showModels = { type = "toggle", order = 3, width = "full", name = L["Show the 3D model of each boss"] },
 			minTrashQuality = {
-				type = "select", order = 3, name = L["Trash items shown from quality"],
+				type = "select", order = 4, name = L["Trash items shown from quality"],
 				values = { [0] = ITEM_QUALITY0_DESC, [1] = ITEM_QUALITY1_DESC, [2] = ITEM_QUALITY2_DESC, [3] = ITEM_QUALITY3_DESC, [4] = ITEM_QUALITY4_DESC },
 			},
 		},

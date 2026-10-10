@@ -7,6 +7,7 @@ local Alts = ns.NewModule("Alts", {
 }, {
 	chars = {}, -- [name-realm] = data
 	goldHistory = {}, -- [YYYY-MM-DD] = total copper on that day
+	window = {},
 })
 
 local BAG_FIRST, BAG_LAST = 0, NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4
@@ -169,79 +170,115 @@ local function SortedChars(self)
 	return list
 end
 
+function Alts:CreateWindow()
+	if self.window then return end
+	local UI, C = ns.UI, ns.UI.COLORS
+	local f = UI.Window("ForeverCompanionAlts", L["My characters"], 760, 620, self:Global().window,
+		{ resizable = true, minWidth = 560, minHeight = 400 })
+	f.OnResized = function() self:RenderWindow() end
+	local scroll = UI.Scroll(f.content)
+	scroll:SetPoint("TOPLEFT", 0, -4)
+	scroll:SetPoint("BOTTOMRIGHT", -4, 4)
+	f.scroll = scroll
+	f.cards = UI.Pool(function(parent)
+		local card = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+		UI.Backdrop(card, C.panel, C.border)
+		card.name = UI.Text(card, 17, C.text)
+		card.name:SetPoint("TOPLEFT", 16, -14)
+		card.name:SetWordWrap(false)
+		card.money = UI.Text(card, 14, C.text, "RIGHT")
+		card.money:SetPoint("TOPRIGHT", -16, -15)
+		card.sub = UI.Text(card, 12, C.muted)
+		card.sub:SetPoint("TOPLEFT", card.name, "BOTTOMLEFT", 0, -5)
+		card.sub:SetPoint("RIGHT", -16, 0)
+		card.sub:SetWordWrap(false)
+		card.xp = UI.Bar(card, 14, C.xp)
+		card.xp:SetPoint("TOPLEFT", card.sub, "BOTTOMLEFT", 0, -10)
+		card.xp:SetPoint("RIGHT", -16, 0)
+		card.xp.text:SetFontObject(UI.Font(11))
+		card.details = UI.Text(card, 12, C.text)
+		card.details:SetPoint("RIGHT", -16, 0)
+		card.details:SetJustifyV("TOP")
+		card.forget = UI.Button(card, L["Forget this character"], 170, 22, "ghost")
+		card.forget:SetPoint("BOTTOMRIGHT", -10, 8)
+		return card
+	end)
+	self.window = f
+end
+
 function Alts:ShowWindow()
 	self:UpdateBasics()
-	local AceGUI = LibStub("AceGUI-3.0")
-	if self.window then self.window:Release() end
-	local frame = AceGUI:Create("Frame")
-	self.window = frame
-	frame:SetTitle(L["My characters"])
-	frame:SetLayout("Fill")
-	frame:SetWidth(720)
-	frame:SetHeight(520)
-	frame:SetCallback("OnClose", function(widget) AceGUI:Release(widget); self.window = nil end)
+	self:CreateWindow()
+	self.window:Show()
+	self:RenderWindow()
+end
 
-	local scroll = AceGUI:Create("ScrollFrame")
-	scroll:SetLayout("List")
-	frame:AddChild(scroll)
-
-	local total, journeys = 0, 0
+function Alts:RenderWindow()
+	local f = self.window
+	if not f or not f:IsShown() then return end
+	local UI, C = ns.UI, ns.UI.COLORS
+	f.cards:ReleaseAll()
+	local child = f.scroll.child
+	local y = 16
+	local total, journeys, count = 0, 0, 0
+	local now = time()
 	for _, c in ipairs(SortedChars(self)) do
 		total = total + (c.money or 0)
+		count = count + 1
 		if c.reached60 then journeys = journeys + 1 end
-
-		local group = AceGUI:Create("InlineGroup")
-		group:SetFullWidth(true)
-		group:SetLayout("Flow")
-		group:SetTitle(ns.ClassColored(string.format("%s - %s", c.name or "?", c.realm or ""), c.class))
-
-		local lines = {}
-		lines[#lines + 1] = string.format("%s %d %s  |  %s  |  %s", LEVEL, c.level or 0, c.raceName or "", ns.FormatMoney(c.money or 0), c.zone or "")
+		local card = f.cards:Acquire(child)
+		card:SetPoint("TOPLEFT", child, "TOPLEFT", 16, -y)
+		card:SetPoint("RIGHT", child, "RIGHT", -16, 0)
+		card.name:SetText(ns.ClassColored(c.name or "?", c.class) .. UI.Colorize("  " .. (c.realm or ""), C.muted))
+		card.money:SetText(ns.FormatMoney(c.money or 0))
+		local sub = { string.format("%s %d %s", LEVEL, c.level or 0, c.raceName or "") }
+		if c.zone and c.zone ~= "" then sub[#sub + 1] = c.zone end
+		if c.played then sub[#sub + 1] = L["Played:"] .. " " .. ns.FormatDuration(c.played) end
+		if c.lastSeen then sub[#sub + 1] = L["Last seen:"] .. " " .. date("%d/%m %H:%M", c.lastSeen) end
+		card.sub:SetText(table.concat(sub, "  ·  "))
+		local h = 58
 		if c.level and c.level < 60 and c.xpMax and c.xpMax > 0 then
-			lines[#lines + 1] = string.format(L["XP %.0f%%, rested %.0f%%"], (c.xp or 0) / c.xpMax * 100, (c.rested or 0) / c.xpMax * 100)
+			card.xp:Show()
+			card.xp:SetValue(c.xp or 0, c.xpMax)
+			card.xp.text:SetText(string.format(L["XP %.0f%%, rested %.0f%%"], (c.xp or 0) / c.xpMax * 100, (c.rested or 0) / c.xpMax * 100))
+			h = h + 22
+		else
+			card.xp:Hide()
 		end
-		if c.played then
-			lines[#lines + 1] = L["Played:"] .. " " .. ns.FormatDuration(c.played)
-		end
+		local lines = {}
 		if c.professions and #c.professions > 0 then
 			local parts = {}
-			for _, p in ipairs(c.professions) do parts[#parts + 1] = string.format("%s %d/%d", p.name, p.rank or 0, p.max or 0) end
-			lines[#lines + 1] = L["Professions:"] .. " " .. table.concat(parts, ", ")
+			for _, p in ipairs(c.professions) do parts[#parts + 1] = string.format("%s %s", p.name, UI.Colorize(string.format("%d/%d", p.rank or 0, p.max or 0), C.gold)) end
+			lines[#lines + 1] = UI.Colorize(L["Professions:"], C.muted) .. " " .. table.concat(parts, ", ")
 		end
-		local now = time()
 		local locks = {}
 		for _, lock in ipairs(c.lockouts or {}) do
 			if lock.expires > now then
-				locks[#locks + 1] = string.format("%s %d/%d (%s)", lock.name, lock.progress or 0, lock.total or 0, ns.FormatDuration(lock.expires - now))
+				locks[#locks + 1] = string.format("%s %d/%d %s", lock.name, lock.progress or 0, lock.total or 0, UI.Colorize("(" .. ns.FormatDuration(lock.expires - now) .. ")", C.muted))
 			end
 		end
-		if #locks > 0 then lines[#lines + 1] = L["Lockouts:"] .. " " .. table.concat(locks, ", ") end
-		if c.lastSeen then lines[#lines + 1] = "|cff888888" .. L["Last seen:"] .. " " .. date("%d/%m/%Y %H:%M", c.lastSeen) .. "|r" end
-
-		local label = AceGUI:Create("Label")
-		label:SetFullWidth(true)
-		label:SetText(table.concat(lines, "\n"))
-		group:AddChild(label)
-
-		if c.key ~= ns.PlayerKey() then
-			local delete = AceGUI:Create("Button")
-			delete:SetText(L["Forget this character"])
-			delete:SetWidth(180)
-			delete:SetCallback("OnClick", function()
-				self:Global().chars[c.key] = nil
-				self:ShowWindow()
+		if #locks > 0 then lines[#lines + 1] = UI.Colorize(L["Lockouts:"], C.muted) .. " " .. table.concat(locks, ", ") end
+		card.details:ClearAllPoints()
+		card.details:SetPoint("TOPLEFT", card, "TOPLEFT", 16, -(h + 4))
+		card.details:SetPoint("RIGHT", card, "RIGHT", -16, 0)
+		card.details:SetText(table.concat(lines, "\n"))
+		if #lines > 0 then h = h + card.details:GetStringHeight() + 10 end
+		local isMe = c.key == ns.PlayerKey()
+		card.forget:SetShown(not isMe)
+		if not isMe then
+			h = h + 26
+			local key = c.key
+			card.forget:SetScript("OnClick", function()
+				self:Global().chars[key] = nil
+				self:RenderWindow()
 			end)
-			group:AddChild(delete)
 		end
-		scroll:AddChild(group)
+		card:SetHeight(h + 10)
+		y = y + h + 20
 	end
-
-	local summary = AceGUI:Create("Label")
-	summary:SetFullWidth(true)
-	summary:SetFontObject(GameFontNormalLarge)
-	summary:SetText(string.format(L["Total gold: %s   |   1-60 journeys completed (Legacy): %d"], ns.FormatMoney(total), journeys))
-	scroll:AddChild(summary)
-	frame:SetStatusText(L["Lockouts, professions and bank are updated when you log in on each character and open the bank."])
+	f.subtitle:SetText(string.format(L["%d characters"], count) .. "  ·  " .. ns.FormatMoney(total) .. "  ·  " ..
+		string.format(L["1-60 journeys: %d"], journeys))
+	f.scroll:SetContentHeight(y + 10)
 end
 
 function Alts:Find(text)

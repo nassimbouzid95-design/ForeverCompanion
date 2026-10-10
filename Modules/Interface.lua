@@ -41,25 +41,42 @@ local function Colored(value, low, high, text)
 	return "|c" .. color .. text .. "|r"
 end
 
+local INFO_SEGMENTS = {
+	{ key = "money", icon = "Interface\\MoneyFrame\\UI-GoldIcon" },
+	{ key = "bags", icon = "Interface\\Buttons\\Button-Backpack-Up" },
+	{ key = "durability", icon = "Interface\\Icons\\Trade_BlackSmithing" },
+	{ key = "latency", icon = "Interface\\Icons\\INV_Misc_PocketWatch_01" },
+	{ key = "fps", icon = "Interface\\Icons\\INV_Misc_Spyglass_03" },
+}
+
 function UI:CreateInfoBar()
 	if self.bar then return end
-	local f = CreateFrame("Frame", "ForeverCompanionInfoBar", UIParent, "BackdropTemplate")
-	f:SetSize(420, 20)
-	f:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8" })
-	f:SetBackdropColor(0, 0, 0, 0.55)
-	f:SetMovable(true)
-	f:EnableMouse(true)
-	f:SetClampedToScreen(true)
-	f:RegisterForDrag("LeftButton")
-	f:SetScript("OnDragStart", function(frame) if not self:Settings().infoLocked then frame:StartMoving() end end)
+	local Kit, C = ns.UI, ns.UI.COLORS
+	local f = Kit.Panel("ForeverCompanionInfoBar", 440, 30, function()
+		return { locked = self:Settings().infoLocked, point = nil }
+	end)
 	f:SetScript("OnDragStop", function(frame)
 		frame:StopMovingOrSizing()
 		local point, _, relPoint, x, y = frame:GetPoint()
 		self:Settings().infoPoint = { point, "UIParent", relPoint, x, y }
 	end)
-	local text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	text:SetPoint("CENTER")
-	f.text = text
+	f.segments = {}
+	local prev
+	for _, seg in ipairs(INFO_SEGMENTS) do
+		local holder = CreateFrame("Frame", nil, f)
+		holder:SetHeight(30)
+		holder.icon = holder:CreateTexture(nil, "ARTWORK")
+		holder.icon:SetSize(16, 16)
+		holder.icon:SetPoint("LEFT", 0, 0)
+		holder.icon:SetTexture(seg.icon)
+		if seg.key ~= "money" then holder.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+		holder.text = Kit.Text(holder, 13, C.text)
+		holder.text:SetPoint("LEFT", holder.icon, "RIGHT", 5, 0)
+		holder.text:SetWordWrap(false)
+		if prev then holder:SetPoint("LEFT", prev, "RIGHT", 14, 0) else holder:SetPoint("LEFT", f, "LEFT", 14, 0) end
+		f.segments[seg.key] = holder
+		prev = holder
+	end
 	local elapsed = 1
 	f:SetScript("OnUpdate", function(_, e)
 		elapsed = elapsed + e
@@ -76,14 +93,22 @@ function UI:UpdateInfoBar()
 	local durability = ns.LowestDurability()
 	local _, _, home, world = GetNetStats()
 	local fps = GetFramerate()
-	f.text:SetText(table.concat({
-		ns.FormatMoney(GetMoney()),
-		L["Bags"] .. " " .. Colored(free, 2, 8, free .. "/" .. total),
-		L["Durability"] .. " " .. Colored(durability * 100, 20, 50, string.format("%d%%", durability * 100)),
-		Colored(-math.max(home, world), -300, -150, math.max(home, world) .. " ms"),
-		Colored(fps, 20, 40, string.format("%d fps", fps)),
-	}, "   "))
-	f:SetWidth(f.text:GetStringWidth() + 24)
+	local values = {
+		money = ns.FormatMoney(GetMoney()),
+		bags = Colored(free, 2, 8, free .. "/" .. total),
+		durability = Colored(durability * 100, 20, 50, string.format("%d%%", durability * 100)),
+		latency = Colored(-math.max(home, world), -300, -150, math.max(home, world) .. " ms"),
+		fps = Colored(fps, 20, 40, string.format("%d fps", fps)),
+	}
+	local width = 14
+	for _, seg in ipairs(INFO_SEGMENTS) do
+		local holder = f.segments[seg.key]
+		holder.text:SetText(values[seg.key])
+		local w = 21 + holder.text:GetStringWidth()
+		holder:SetWidth(w)
+		width = width + w + 14
+	end
+	f:SetWidth(width)
 end
 
 function UI:ApplyInfoBar()

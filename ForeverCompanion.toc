@@ -4,7 +4,7 @@
 ## Notes-frFR: Le compagnon complet hors combat pour WoW Forever : routes d'XP, guide des donjons et raids avec taux de drop, rerolls, sacs, carte, campements et plus.
 ## Author: Nassim
 ## Version: @project-version@
-## IconTexture: Interface\Icons\INV_Misc_Map_01
+## IconTexture: Interface\AddOns\ForeverCompanion\Media\Logo
 ## SavedVariables: ForeverCompanionDB
 ## OptionalDeps: Ace3, LibDBIcon-1.0, LibSharedMedia-3.0
 ## X-Category: Quests & Leveling
@@ -19,6 +19,7 @@ Locales\enUS.lua
 Locales\frFR.lua
 
 Core\Init.lua
+Core\UI.lua
 Core\Core.lua
 Core\Minimap.lua
 Core\Options.lua
