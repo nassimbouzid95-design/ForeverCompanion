@@ -9,7 +9,7 @@
 ## OptionalDeps: Ace3, LibDBIcon-1.0, LibSharedMedia-3.0
 ## X-Category: Quests & Leveling
 ## X-License: MIT
-## X-Curse-Project-ID: 000000
+## X-Curse-Project-ID: 1736958
 
 #@no-lib-strip@
 embeds.xml
