@@ -1,7 +1,7 @@
 -- ForeverCompanion: dungeon & raid guide.
--- Instances = reference list (Data\Instances.lua) + the in-game Adventure Guide + instances met in game.
--- Bosses and loot lists come from the Adventure Guide when the client has it, and from the drop collector.
--- Drop rates come from the drop collector (and reference rates when we have verified ones).
+-- Instances, bosses, health, loot and rates come from the built-in database (Data\InstanceDB.lua);
+-- rates measured by the drop collector are shown next to them, and instances only the collector
+-- knows (new Forever content) are listed too.
 local _, ns = ...
 local L = ns.L
 
@@ -16,149 +16,141 @@ local AceGUI = LibStub("AceGUI-3.0")
 local SEP = "\001"
 
 ---------------------------------------------------------------------------
--- Building the instance list
+-- Instance list: the built-in database (Data\InstanceDB.lua) first, then instances only the
+-- drop collector knows (new Forever content).
 ---------------------------------------------------------------------------
-local function ReadJournal(list)
-	if not (EJ_GetNumTiers and EJ_GetInstanceByIndex) then return end
-	local ok = pcall(function()
-		for tier = 1, EJ_GetNumTiers() do
-			EJ_SelectTier(tier)
-			for _, isRaid in ipairs({ false, true }) do
-				local index = 1
-				while true do
-					local journalID, name = EJ_GetInstanceByIndex(index, isRaid)
-					if not journalID then break end
-					local mapID = select(10, EJ_GetInstanceInfo(journalID))
-					if mapID and mapID > 0 then
-						local entry = list[mapID] or { id = mapID }
-						list[mapID] = entry
-						entry.name = entry.name or name
-						entry.kind = entry.kind or (isRaid and "raid" or "dungeon")
-						entry.journalID = journalID
-						entry.bosses = {}
-						local b = 1
-						while true do
-							local bossName, _, journalEncounterID, _, _, _, dungeonEncounterID = EJ_GetEncounterInfoByIndex(b, journalID)
-							if not bossName then break end
-							entry.bosses[#entry.bosses + 1] = { name = bossName, journalEncounterID = journalEncounterID, encounterID = dungeonEncounterID }
-							b = b + 1
-						end
-					end
-					index = index + 1
-				end
-			end
-		end
-	end)
-	return ok
+local function EntryName(entry)
+	if entry.kind == "world" then return L["World bosses"] end
+	return entry.name or ns.InstanceName(entry.id)
 end
+ns.InstanceEntryName = EntryName
 
 function Guide:BuildList()
-	local list = {}
-	for id, info in pairs(ns.Instances) do
-		list[id] = { id = id, name = ns.InstanceName(id), kind = info.kind, min = info.min, max = info.max, size = info.size, zone = info.zone, x = info.x, y = info.y }
+	local list, known = {}, {}
+	for index, entry in ipairs(ns.InstanceDB or {}) do
+		list["k" .. index] = entry
+		if entry.id then known[entry.id] = true end
 	end
-	ReadJournal(list)
 	for id, data in pairs(ns.CollectedInstances and ns.CollectedInstances() or {}) do
-		local entry = list[id] or { id = id }
-		list[id] = entry
-		entry.name = entry.name or data.name or ns.InstanceName(id)
-		entry.kind = entry.kind or data.kind
-		entry.size = entry.size or data.size
-	end
-	for _, raid in ipairs(ns.ForeverRaids) do
-		for _, entry in pairs(list) do
-			if entry.name == raid.name then
-				entry.size, entry.min, entry.max, entry.isNew = entry.size or raid.size, raid.min, raid.max, true
+		if not known[id] then
+			local entry = { id = id, name = data.name or ns.InstanceName(id), kind = data.kind == "raid" and "raid" or "dungeon", size = data.size, collected = true }
+			for _, raid in ipairs(ns.ForeverRaids) do
+				if raid.name == entry.name then entry.min, entry.max, entry.size, entry.isNew = raid.min, raid.max, raid.size, true end
 			end
+			list["c" .. id] = entry
 		end
 	end
 	self.list = list
 	return list
 end
 
----------------------------------------------------------------------------
--- Tree
----------------------------------------------------------------------------
-local function SortInstances(a, b)
-	if (a.min or 99) ~= (b.min or 99) then return (a.min or 99) < (b.min or 99) end
-	return (a.name or "") < (b.name or "")
-end
-
--- Bosses of an instance: Adventure Guide first, then bosses only the collector knows.
-function Guide:Bosses(entry)
-	local bosses, known = {}, {}
-	for _, boss in ipairs(entry.bosses or {}) do
-		bosses[#bosses + 1] = boss
-		if boss.encounterID then known[boss.encounterID] = true end
-	end
+-- Bosses of a collector-only instance.
+function Guide:CollectedBosses(entry)
+	local bosses = {}
 	local data = ns.CollectedInstances()[entry.id]
 	if data then
-		local extra = {}
 		for encounterID, enc in pairs(data.encounters) do
-			if not known[encounterID] then
-				extra[#extra + 1] = { name = enc.name or ("#" .. encounterID), encounterID = encounterID }
-			end
+			bosses[#bosses + 1] = { name = enc.name or ("#" .. encounterID), npc = enc.npc, kills = enc.kills }
 		end
-		table.sort(extra, function(a, b) return a.name < b.name end)
-		for _, boss in ipairs(extra) do bosses[#bosses + 1] = boss end
+		table.sort(bosses, function(a, b) return a.name < b.name end)
 	end
 	return bosses
 end
 
+function Guide:Bosses(entry)
+	if entry.collected then return self:CollectedBosses(entry) end
+	return entry.bosses or {}
+end
+
+---------------------------------------------------------------------------
+-- Tree
+---------------------------------------------------------------------------
+local function SortNodes(a, b)
+	if (a.entry.min or 99) ~= (b.entry.min or 99) then return (a.entry.min or 99) < (b.entry.min or 99) end
+	return a.index < b.index
+end
+
+local function BossLabel(boss)
+	if boss.type == "rare" then return "|cffbbbbff" .. boss.name .. "|r |cff888888(" .. L["rare"] .. ")|r" end
+	if boss.type == "extra" then return "|cffaaaaaa" .. boss.name .. "|r" end
+	return boss.name
+end
+
 function Guide:BuildTree()
-	local dungeons, raids = {}, {}
-	for _, entry in pairs(self:BuildList()) do
-		local node = {
-			value = "i" .. entry.id,
-			text = string.format("%s%s", entry.name or "?", entry.min and string.format(" |cff888888(%d-%d)|r", entry.min, entry.max) or ""),
-			children = {},
-			sort = entry,
-		}
-		for i, boss in ipairs(self:Bosses(entry)) do
-			node.children[#node.children + 1] = { value = "b" .. i, text = boss.name }
+	local groups = { dungeon = {}, raid = {}, world = {} }
+	local order = 0
+	for key, entry in pairs(self:BuildList()) do
+		order = order + 1
+		local index = tonumber(key:sub(2)) or (1000 + order)
+		local text = EntryName(entry)
+		if entry.min and entry.kind ~= "world" then
+			text = text .. string.format(" |cff888888(%d-%d)|r", entry.min, entry.max)
 		end
-		node.children[#node.children + 1] = { value = "trash", text = "|cffaaaaaa" .. L["Trash"] .. "|r" }
-		if entry.kind == "raid" then raids[#raids + 1] = node else dungeons[#dungeons + 1] = node end
+		if entry.isNew or entry.collected then text = text .. " |cff33ccff*|r" end
+		local node = { value = key, text = text, children = {}, entry = entry, index = index }
+		for i, boss in ipairs(self:Bosses(entry)) do
+			node.children[#node.children + 1] = { value = "b" .. i, text = BossLabel(boss) }
+		end
+		if entry.kind ~= "world" then
+			node.children[#node.children + 1] = { value = "trash", text = "|cffaaaaaa" .. L["Trash"] .. "|r" }
+		end
+		local group = groups[entry.kind] or groups.dungeon
+		group[#group + 1] = node
 	end
-	local function sorter(a, b) return SortInstances(a.sort, b.sort) end
-	table.sort(dungeons, sorter)
-	table.sort(raids, sorter)
-	for _, n in ipairs(dungeons) do n.sort = nil end
-	for _, n in ipairs(raids) do n.sort = nil end
-	return {
-		{ value = "dungeons", text = L["Dungeons"], children = dungeons },
-		{ value = "raids", text = L["Raids"], children = raids },
-		{ value = "wishlist", text = "|cffffd100" .. L["Wishlist"] .. "|r" },
+	for _, group in pairs(groups) do
+		table.sort(group, SortNodes)
+		for _, node in ipairs(group) do node.entry, node.index = nil, nil end
+	end
+	local tree = {
+		{ value = "dungeons", text = L["Dungeons"], children = groups.dungeon },
+		{ value = "raids", text = L["Raids"], children = groups.raid },
 	}
+	-- World bosses: one entry, shown directly with its bosses.
+	if groups.world[1] then tree[#tree + 1] = groups.world[1] end
+	tree[#tree + 1] = { value = "wishlist", text = "|cffffd100" .. L["Wishlist"] .. "|r" }
+	return tree
 end
 
 ---------------------------------------------------------------------------
 -- Item rows
 ---------------------------------------------------------------------------
-local function RateText(rate, kills)
-	if not rate then
-		return kills > 0 and string.format("|cff8888880%% (%d %s)|r", kills, L["kills"]) or "|cff888888" .. L["no data"] .. "|r"
-	end
-	local color = rate >= 20 and "ff33ff33" or rate >= 5 and "ffffd100" or "ffff8844"
-	if kills > 0 then
-		return string.format("|c%s%.1f%%|r |cff888888(%d %s)|r", color, rate, kills, L["kills"])
-	end
-	return string.format("|c%s%.1f%%|r |cff888888(%s)|r", color, rate, L["reference"])
+local function Percent(rate)
+	local color = rate >= 20 and "ff33ff33" or rate >= 5 and "ffffd100" or rate >= 1 and "ffff8844" or "ffff4444"
+	local fmt = rate >= 1 and "%.1f%%" or "%.2f%%"
+	return string.format("|c%s" .. fmt .. "|r", color, rate)
 end
+
+-- Reference rate from the database, plus the rate measured by the collector when there is one.
+local function RateText(rate, measured, kills)
+	local parts = {}
+	if rate and rate >= 0 then
+		parts[#parts + 1] = Percent(rate)
+	elseif rate then
+		parts[#parts + 1] = "|cff888888?|r"
+	end
+	if measured and kills and kills > 0 then
+		parts[#parts + 1] = string.format("|cff888888%s %s (%d %s)|r", L["measured:"], Percent(measured), kills, L["kills"])
+	end
+	return table.concat(parts, "  ")
+end
+ns.DropRateText = RateText
 
 function Guide:AddItemRow(container, itemID, rateText)
 	local row = AceGUI:Create("InteractiveLabel")
 	row:SetFullWidth(true)
 	row:SetHighlight("Interface\\QuestFrame\\UI-QuestTitleHighlight")
 	local function Render()
-		local name, link, quality, _, _, _, _, _, _, icon = C_Item.GetItemInfo(itemID)
+		local name, link, _, _, _, _, _, _, _, icon = C_Item.GetItemInfo(itemID)
 		local star = self:Global().wishlist[itemID] and "|TInterface\\COMMON\\FavoritesIcon:14|t " or ""
 		row:SetImage(icon or C_Item.GetItemIconByID(itemID))
 		row:SetImageSize(18, 18)
-		row:SetText(string.format("%s%s   %s", star, link or name or ("#" .. itemID), rateText or ""))
-		return quality
+		row:SetText(string.format("%s%s   %s", star, link or name or ("|cff888888" .. L["Item"] .. " #" .. itemID .. "|r"), rateText or ""))
+		return name ~= nil
 	end
-	Render()
+	if not Render() then
+		if C_Item.RequestLoadItemDataByID then C_Item.RequestLoadItemDataByID(itemID) end
+		self.pendingRows[#self.pendingRows + 1] = Render
+	end
 	row:SetCallback("OnEnter", function(widget)
 		GameTooltip:SetOwner(widget.frame, "ANCHOR_CURSOR")
 		GameTooltip:SetItemByID(itemID)
@@ -199,105 +191,134 @@ local function Text(container, text, font)
 	return label
 end
 
--- Loot of a boss: Adventure Guide list + items seen by the collector, sorted by rate.
-function Guide:BossLoot(entry, boss)
-	local items = {}
-	local data = ns.CollectedInstances()[entry.id]
-	local enc = data and boss.encounterID and data.encounters[boss.encounterID]
-	local npcID = enc and enc.npc
+local function MobInfo(mob)
+	local parts = {}
+	if mob.level then parts[#parts + 1] = L["Level"] .. " " .. mob.level end
+	if mob.hp then parts[#parts + 1] = string.format(L["%s HP"], ns.FormatNumber(mob.hp)) end
+	return table.concat(parts, "   ")
+end
 
-	if boss.journalEncounterID and EJ_SelectEncounter then
-		pcall(function()
-			EJ_SelectInstance(entry.journalID)
-			EJ_SelectEncounter(boss.journalEncounterID)
-			if EJ_ResetLootFilter then EJ_ResetLootFilter() end
-			for i = 1, EJ_GetNumLoot() do
-				local info = C_EncounterJournal.GetLootInfoByIndex(i)
-				if info and info.itemID then items[info.itemID] = true end
+-- Loot list of a creature: database rates + measured rates + items only the collector saw.
+function Guide:LootList(entry, mob)
+	local list, seen = {}, {}
+	local loot = mob.loot or {}
+	for i = 1, #loot, 2 do
+		local itemID, rate = loot[i], loot[i + 1]
+		if not seen[itemID] then
+			seen[itemID] = true
+			local measured, kills
+			if entry.id and mob.npc then measured, kills = ns.DropRate(entry.id, mob.npc, itemID) end
+			list[#list + 1] = { itemID = itemID, rate = rate, measured = kills and kills > 0 and measured or nil, kills = kills }
+		end
+	end
+	local data = entry.id and mob.npc and ns.CollectedInstances()[entry.id]
+	local npc = data and data.npcs[mob.npc]
+	if npc then
+		for itemID in pairs(npc.items) do
+			if not seen[itemID] then
+				local measured, kills = ns.DropRate(entry.id, mob.npc, itemID)
+				list[#list + 1] = { itemID = itemID, measured = measured, kills = kills }
 			end
-		end)
+		end
 	end
-	if npcID and data.npcs[npcID] then
-		for itemID in pairs(data.npcs[npcID].items) do items[itemID] = true end
-	end
-	local list = {}
-	for itemID in pairs(items) do
-		local rate, kills = 0, 0
-		if npcID then rate, kills = ns.DropRate(entry.id, npcID, itemID) end
-		list[#list + 1] = { itemID = itemID, rate = rate, kills = kills or 0 }
-	end
-	table.sort(list, function(a, b) return (a.rate or 0) > (b.rate or 0) end)
-	return list, enc
+	table.sort(list, function(a, b)
+		local ra, rb = a.rate or a.measured or 0, b.rate or b.measured or 0
+		return ra > rb
+	end)
+	return list
+end
+
+function Guide:WayButton(container, entry)
+	local where = entry.id and ns.Instances[entry.id]
+	if not where then return end
+	local go = AceGUI:Create("Button")
+	go:SetText(L["Show the way to the entrance"])
+	go:SetWidth(260)
+	go:SetCallback("OnClick", function()
+		ns.SetWaypoint(where.zone, where.x, where.y, EntryName(entry), "guide")
+		ns.Print(string.format(L["The arrow now points to %s (%s)."], EntryName(entry), ns.MapName(where.zone)))
+	end)
+	container:AddChild(go)
 end
 
 ---------------------------------------------------------------------------
 -- Pages
 ---------------------------------------------------------------------------
 function Guide:ShowInstance(container, entry)
-	Text(container, entry.name or "?", GameFontNormalHuge)
+	Text(container, EntryName(entry), GameFontNormalHuge)
 	local parts = {}
-	if entry.min then parts[#parts + 1] = string.format(L["Levels %d-%d"], entry.min, entry.max) end
+	if entry.min and entry.kind ~= "world" then parts[#parts + 1] = string.format(L["Levels %d-%d"], entry.min, entry.max) end
+	if entry.enter and entry.kind ~= "world" then parts[#parts + 1] = string.format(L["Entry from level %d"], entry.enter) end
 	if entry.size then parts[#parts + 1] = string.format(L["%d players"], entry.size) end
-	if entry.zone then parts[#parts + 1] = ns.MapName(entry.zone) end
+	local where = entry.id and ns.Instances[entry.id]
+	if where then parts[#parts + 1] = ns.MapName(where.zone) end
 	if entry.isNew then parts[#parts + 1] = "|cff33ccff" .. L["New in Forever"] .. "|r" end
 	Text(container, table.concat(parts, "  |  "), GameFontHighlight)
-	if entry.zone and entry.x then
-		local go = AceGUI:Create("Button")
-		go:SetText(L["Show the way to the entrance"])
-		go:SetWidth(240)
-		go:SetCallback("OnClick", function() ns.SetWaypoint(entry.zone, entry.x, entry.y, entry.name, "guide") end)
-		container:AddChild(go)
+	self:WayButton(container, entry)
+
+	Heading(container, L["Bosses"])
+	for _, boss in ipairs(self:Bosses(entry)) do
+		if boss.type ~= "extra" then
+			local count = boss.loot and #boss.loot / 2 or 0
+			Text(container, string.format("%s   |cff888888%s   %d %s|r", BossLabel(boss), MobInfo(boss), count, L["items"]))
+		end
 	end
-	local data = ns.CollectedInstances()[entry.id]
-	local kills = 0
-	if data then for _, npc in pairs(data.npcs) do kills = kills + npc.kills end end
-	Text(container, "\n" .. string.format(L["Kills recorded in this instance: %d"], kills))
-	Text(container, "|cff888888" .. L["Select a boss on the left for its loot and drop rates, or Trash for the loot of normal monsters."] .. "|r")
+	if entry.collected then
+		Text(container, "|cff888888" .. L["This instance is not in the built-in database yet: what you see here was recorded by the drop collector."] .. "|r")
+	end
+	Text(container, "\n|cff888888" .. L["Select a boss on the left for its loot and drop rates, or Trash for the loot of normal monsters."] .. "|r")
 end
 
 function Guide:ShowBoss(container, entry, boss)
-	Text(container, boss.name, GameFontNormalHuge)
-	Text(container, entry.name, GameFontHighlight)
-	local list, enc = self:BossLoot(entry, boss)
-	Text(container, string.format(L["Kills recorded: %d"], enc and enc.kills or 0))
+	Text(container, BossLabel(boss), GameFontNormalHuge)
+	Text(container, EntryName(entry), GameFontHighlight)
+	local info = MobInfo(boss)
+	if info ~= "" then Text(container, info, GameFontHighlightLarge) end
+	if boss.kills then Text(container, string.format(L["Kills recorded: %d"], boss.kills)) end
+	self:WayButton(container, entry)
 	Heading(container, L["Loot"])
+	local list = self:LootList(entry, boss)
 	if #list == 0 then
 		Text(container, "|cff888888" .. L["No loot known yet. Kill this boss with the addon on and its loot will appear here."] .. "|r")
 	end
 	for _, item in ipairs(list) do
-		self:AddItemRow(container, item.itemID, RateText(item.rate, item.kills))
+		self:AddItemRow(container, item.itemID, RateText(item.rate, item.measured, item.kills))
 	end
 end
 
 function Guide:ShowTrash(container, entry)
-	Text(container, entry.name .. " - " .. L["Trash"], GameFontNormalHuge)
-	local data = ns.CollectedInstances()[entry.id]
-	local npcs = {}
+	Text(container, EntryName(entry) .. " - " .. L["Trash"], GameFontNormalHuge)
+	local mobs = {}
+	for _, mob in ipairs(entry.trash or {}) do mobs[#mobs + 1] = mob end
+	-- Creatures only the collector saw.
+	local data = entry.id and ns.CollectedInstances()[entry.id]
 	if data then
+		local known = {}
+		for _, mob in ipairs(mobs) do if mob.npc then known[mob.npc] = true end end
+		for _, boss in ipairs(entry.bosses or {}) do if boss.npc then known[boss.npc] = true end end
 		for npcID, npc in pairs(data.npcs) do
-			if not npc.boss and next(npc.items) then npcs[#npcs + 1] = { id = npcID, npc = npc } end
+			if not npc.boss and not known[npcID] and next(npc.items) then
+				mobs[#mobs + 1] = { name = npc.name or ("#" .. npcID), npc = npcID }
+			end
 		end
 	end
-	table.sort(npcs, function(a, b) return a.npc.kills > b.npc.kills end)
-	if #npcs == 0 then
+	if #mobs == 0 then
 		Text(container, "|cff888888" .. L["No trash loot recorded yet for this instance."] .. "|r")
 		return
 	end
+	Text(container, "|cff888888" .. string.format(L["%d monsters. Items shown from the quality chosen in the options."], #mobs) .. "|r")
 	local minQuality = self:Settings().minTrashQuality
-	for _, e in ipairs(npcs) do
-		Heading(container, string.format("%s  |cff888888(%d %s)|r", e.npc.name or ("#" .. e.id), math.max(e.npc.kills, e.npc.looted), L["kills"]))
-		local items = {}
-		for itemID in pairs(e.npc.items) do
-			local quality = C_Item.GetItemQualityByID(itemID)
+	for _, mob in ipairs(mobs) do
+		Heading(container, string.format("%s  |cff888888%s|r", mob.name, MobInfo(mob)))
+		local shown = 0
+		for _, item in ipairs(self:LootList(entry, mob)) do
+			local quality = C_Item.GetItemQualityByID(item.itemID)
 			if not quality or quality >= minQuality then
-				local rate, kills = ns.DropRate(entry.id, e.id, itemID)
-				items[#items + 1] = { itemID = itemID, rate = rate, kills = kills }
+				self:AddItemRow(container, item.itemID, RateText(item.rate, item.measured, item.kills))
+				shown = shown + 1
 			end
 		end
-		table.sort(items, function(a, b) return (a.rate or 0) > (b.rate or 0) end)
-		for _, item in ipairs(items) do
-			self:AddItemRow(container, item.itemID, RateText(item.rate, item.kills))
-		end
+		if shown == 0 then Text(container, "|cff888888" .. L["Nothing above the chosen quality."] .. "|r") end
 	end
 end
 
@@ -305,20 +326,20 @@ function Guide:ShowWishlist(container)
 	Text(container, L["Wishlist"], GameFontNormalHuge)
 	Text(container, "|cff888888" .. L["Alt-click an item in the guide to add or remove it. You are alerted when it drops."] .. "|r")
 	for itemID in pairs(self:Global().wishlist) do
-		local sources = ns.ItemDropSources(itemID)
-		local where = sources[1] and string.format("%s - %s %s", ns.InstanceName(sources[1].instanceID), sources[1].name, RateText(sources[1].rate, sources[1].kills)) or ""
-		self:AddItemRow(container, itemID, where)
+		local src = ns.ItemDropSources(itemID)[1]
+		self:AddItemRow(container, itemID, src and string.format("%s - %s  %s", src.where, src.name, src.rate and Percent(src.rate) or "") or "")
 	end
 end
 
 function Guide:Select(path)
 	local content = self.content
 	content:ReleaseChildren()
-	local instanceKey, sub = path:match("i(%d+)" .. SEP .. "?([^" .. SEP .. "]*)$")
+	self.pendingRows = {}
+	local key, sub = path:match("([kc]%d+)" .. SEP .. "?([^" .. SEP .. "]*)$")
 	if path:find("wishlist", 1, true) then
 		self:ShowWishlist(content)
-	elseif instanceKey then
-		local entry = self.list[tonumber(instanceKey)]
+	elseif key then
+		local entry = self.list[key]
 		if not entry then return end
 		if sub == "trash" then
 			self:ShowTrash(content, entry)
@@ -331,6 +352,7 @@ function Guide:Select(path)
 	else
 		Text(content, L["Dungeon & raid guide"], GameFontNormalHuge)
 		Text(content, L["Every dungeon and raid of WoW Forever, with the loot of each boss and of the trash, and how often each item drops."])
+		Text(content, "\n" .. L["Bosses, health, loot and drop rates come from the Classic database (AtlasLootClassic and CMaNGOS). Rates measured in game by the addon are shown next to them. Forever may change some of them: share your data with /fc drops export."])
 	end
 	content:DoLayout()
 end
@@ -346,7 +368,7 @@ function Guide:Toggle()
 	frame:SetLayout("Fill")
 	frame:SetWidth(860)
 	frame:SetHeight(600)
-	frame:SetStatusText(L["Drop rates are measured by players using the addon. Share yours with /fc drops export."])
+	frame:SetStatusText(L["Rates: Classic database, plus what the addon measured in game. Share yours with /fc drops export."])
 	frame:SetCallback("OnClose", function(widget)
 		AceGUI:Release(widget)
 		self.frame, self.content = nil, nil
@@ -369,9 +391,14 @@ function Guide:Toggle()
 	end)
 	-- Open on the instance you are in, if any.
 	local _, instanceType, _, _, _, _, _, instanceID = GetInstanceInfo()
-	if (instanceType == "party" or instanceType == "raid") and self.list[instanceID] then
-		local top = self.list[instanceID].kind == "raid" and "raids" or "dungeons"
-		tree:SelectByPath(top, "i" .. instanceID)
+	local found
+	if instanceType == "party" or instanceType == "raid" then
+		for key, entry in pairs(self.list) do
+			if entry.id == instanceID and (not found or key < found) then found = key end
+		end
+	end
+	if found then
+		tree:SelectByPath(self.list[found].kind == "raid" and "raids" or "dungeons", found)
 	else
 		self:Select("")
 	end
@@ -396,20 +423,24 @@ function Guide:LOOT_OPENED()
 	end
 end
 
-function Guide:EJ_LOOT_DATA_RECIEVED()
-	-- Item info arrives a bit later than the list; redraw the page once.
-	if self.content and self.path and not self.redrawPending then
-		self.redrawPending = true
-		C_Timer.After(0.3, function()
-			self.redrawPending = false
-			if self.content then self:Select(self.path) end
-		end)
-	end
+function Guide:GET_ITEM_INFO_RECEIVED()
+	-- Item names arrive from the server after the page is drawn: fill the rows in place.
+	if not self.content or not self.pendingRows or #self.pendingRows == 0 or self.renderPending then return end
+	self.renderPending = true
+	C_Timer.After(0.2, function()
+		self.renderPending = false
+		if not self.content then return end
+		local still = {}
+		for _, render in ipairs(self.pendingRows) do
+			if not render() then still[#still + 1] = render end
+		end
+		self.pendingRows = still
+	end)
 end
 
 function Guide:OnEnable()
 	self:RegisterEvent("LOOT_OPENED")
-	self:RegisterEvent("EJ_LOOT_DATA_RECIEVED")
+	self:RegisterEvent("GET_ITEM_INFO_RECEIVED")
 end
 
 function Guide:OnDisable()

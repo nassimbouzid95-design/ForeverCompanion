@@ -49,7 +49,9 @@ local function Decorate(button, settings)
 	button.fcEffect:Hide()
 	button.fcJunk:Hide()
 
-	local bag, slot = button:GetBagID(), button:GetID()
+	local bag = button.GetBagID and button:GetBagID()
+	if bag == nil and button:GetParent() then bag = button:GetParent():GetID() end
+	local slot = button:GetID()
 	local info = bag and C_Container.GetContainerItemInfo(bag, slot)
 	if not info or not info.hyperlink then return end
 
@@ -78,22 +80,67 @@ local function Decorate(button, settings)
 	end
 end
 
-function Bags:HookFrame(frame)
-	if not frame or frame.fcHooked or not frame.UpdateItems then return end
-	frame.fcHooked = true
-	hooksecurefunc(frame, "UpdateItems", function(f)
-		if not self:IsEnabled() then return end
-		local settings = self:Settings()
-		for _, button in f:EnumerateValidItems() do
-			Decorate(button, settings)
+-- Item buttons of a bag window, for both the modern (EnumerateValidItems) and the older
+-- (ContainerFrame1Item1...) bag frames.
+local function FrameButtons(frame)
+	local list = {}
+	if frame.EnumerateValidItems then
+		local iter, state, start = frame:EnumerateValidItems()
+		if iter then
+			for _, button in iter, state, start do list[#list + 1] = button end
 		end
+		return list
+	end
+	local name = frame:GetName()
+	for i = 1, 40 do
+		local button = name and _G[name .. "Item" .. i]
+		if not button then break end
+		list[#list + 1] = button
+	end
+	return list
+end
+
+local function BagFrames()
+	local frames = { ContainerFrameCombinedBags }
+	for i = 1, NUM_CONTAINER_FRAMES or 13 do frames[#frames + 1] = _G["ContainerFrame" .. i] end
+	return frames
+end
+
+function Bags:RefreshVisible()
+	if not self:IsEnabled() then return end
+	local settings = self:Settings()
+	for _, frame in pairs(BagFrames()) do
+		if frame and frame:IsShown() then
+			for _, button in ipairs(FrameButtons(frame)) do
+				if button:IsShown() then Decorate(button, settings) end
+			end
+		end
+	end
+end
+
+function Bags:ScheduleRefresh()
+	if self.refreshPending then return end
+	self.refreshPending = true
+	C_Timer.After(0.05, function()
+		self.refreshPending = false
+		self:RefreshVisible()
 	end)
 end
 
+function Bags:HookFrame(frame)
+	if not frame or frame.fcHooked then return end
+	frame.fcHooked = true
+	if frame.UpdateItems then
+		hooksecurefunc(frame, "UpdateItems", function() self:ScheduleRefresh() end)
+	end
+	frame:HookScript("OnShow", function() self:ScheduleRefresh() end)
+end
+
 function Bags:HookAll()
-	self:HookFrame(ContainerFrameCombinedBags)
-	for i = 1, NUM_CONTAINER_FRAMES or 13 do
-		self:HookFrame(_G["ContainerFrame" .. i])
+	for _, frame in pairs(BagFrames()) do self:HookFrame(frame) end
+	if ContainerFrame_Update and not self.globalHooked then
+		self.globalHooked = true
+		hooksecurefunc("ContainerFrame_Update", function() self:ScheduleRefresh() end)
 	end
 end
 
@@ -164,16 +211,33 @@ function Bags:OnEnable()
 	self:HookAll()
 	self:ApplyCombined()
 	self:RegisterEvent("MERCHANT_SHOW")
-	self:RegisterEvent("GET_ITEM_INFO_RECEIVED", function() wipe(effectCache) end)
+	self:RegisterEvent("GET_ITEM_INFO_RECEIVED", function() wipe(effectCache) self:ScheduleRefresh() end)
+	self:RegisterEvent("BAG_UPDATE_DELAYED", "ScheduleRefresh")
+	self:RegisterEvent("ITEM_LOCK_CHANGED", "ScheduleRefresh")
+	-- Bag windows can be created after login.
+	self:RegisterEvent("ADDON_LOADED", function() self:HookAll() end)
+	self:ScheduleRefresh()
+end
+
+function Bags:OnDisable()
+	for _, frame in pairs(BagFrames()) do
+		if frame then
+			for _, button in ipairs(FrameButtons(frame)) do
+				if button.fcLevel then button.fcLevel:Hide() button.fcEffect:Hide() button.fcJunk:Hide() end
+			end
+		end
+	end
 end
 
 function Bags:OnProfileChanged()
 	self:ApplyCombined()
+	self:ScheduleRefresh()
 end
 
 function Bags:GetOptions()
 	local get, set = ns.ProfileAccessors("Bags", function(key)
 		if key == "combinedBags" then self:ApplyCombined() end
+		self:ScheduleRefresh()
 	end)
 	return {
 		get = get, set = set,

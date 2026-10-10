@@ -165,3 +165,40 @@ function ns.Decode(text)
 	local ok, data = LibStub("AceSerializer-3.0"):Deserialize(payload)
 	if ok then return data end
 end
+
+---------------------------------------------------------------------------
+-- World coordinates. Server/world coordinates: x grows to the north, y grows to the west,
+-- continent 0 = Eastern Kingdoms, 1 = Kalimdor. They let the arrow work from one zone to another.
+---------------------------------------------------------------------------
+function ns.MapToWorld(mapID, x, y)
+	if not (mapID and x and y and C_Map.GetWorldPosFromMapPos) then return nil end
+	local ok, continent, pos = pcall(C_Map.GetWorldPosFromMapPos, mapID, CreateVector2D(x, y))
+	if not ok or not continent or not pos then return nil end
+	local wx, wy = pos:GetXY()
+	if ns.AnySecret(continent, wx, wy) then return nil end
+	return continent, wx, wy
+end
+
+-- Map coordinates of a world point on a given map (nil when it is not on that map).
+function ns.WorldToMap(continent, wx, wy, mapID)
+	if not (C_Map.GetMapPosFromWorldPos and mapID) then return nil end
+	local ok, _, pos = pcall(C_Map.GetMapPosFromWorldPos, continent, CreateVector2D(wx, wy), mapID)
+	if not ok or not pos then return nil end
+	local x, y = pos:GetXY()
+	if not x or x < 0 or x > 1 or y < 0 or y > 1 then return nil end
+	return x, y
+end
+
+function ns.PlayerWorldPosition()
+	local mapID, x, y = ns.PlayerMapPosition()
+	if not x then return nil end
+	return ns.MapToWorld(mapID, x, y)
+end
+
+-- Distance (yards) and direction (radians, counter-clockwise from north) between two world points.
+function ns.WorldVector(x1, y1, x2, y2)
+	local dx, dy = x2 - x1, y2 - y1
+	return math.sqrt(dx * dx + dy * dy), math.atan2(dy, dx)
+end
+
+ns.CONTINENT_NAMES = { [0] = "Eastern Kingdoms", [1] = "Kalimdor" }

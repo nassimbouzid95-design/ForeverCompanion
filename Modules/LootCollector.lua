@@ -167,7 +167,27 @@ function ns.CollectedInstances()
 	return Collector:Global().instances
 end
 
--- Where does an item drop? List of { instanceID, npcID, name, rate, kills, boss }.
+-- Where does an item drop? List of { instanceID, npcID, name, where, rate, kills, boss }.
+-- The built-in database comes first (one source per creature), measured rates are merged in.
+local dbIndex
+local function DatabaseIndex()
+	if dbIndex then return dbIndex end
+	dbIndex = {}
+	for _, entry in ipairs(ns.InstanceDB or {}) do
+		local function add(mob, isBoss)
+			local loot = mob.loot or {}
+			for i = 1, #loot, 2 do
+				local id = loot[i]
+				dbIndex[id] = dbIndex[id] or {}
+				table.insert(dbIndex[id], { entry = entry, mob = mob, rate = loot[i + 1] >= 0 and loot[i + 1] or nil, boss = isBoss })
+			end
+		end
+		for _, boss in ipairs(entry.bosses or {}) do if boss.type ~= "extra" then add(boss, true) end end
+		for _, mob in ipairs(entry.trash or {}) do add(mob, false) end
+	end
+	return dbIndex
+end
+
 function ns.ItemDropSources(itemID)
 	if not reverseIndex then
 		reverseIndex = {}
@@ -180,14 +200,36 @@ function ns.ItemDropSources(itemID)
 			end
 		end
 	end
-	local result = {}
-	for _, entry in ipairs(reverseIndex[itemID] or {}) do
-		local data = Collector:Global().instances[entry[1]]
-		local npc = data.npcs[entry[2]]
-		local rate, kills = ns.DropRate(entry[1], entry[2], itemID)
-		result[#result + 1] = { instanceID = entry[1], npcID = entry[2], name = npc.name or ("#" .. entry[2]), rate = rate, kills = kills, boss = npc.boss }
+	local result, seen = {}, {}
+	for _, src in ipairs(DatabaseIndex()[itemID] or {}) do
+		local entry, mob = src.entry, src.mob
+		local measured, kills = 0, 0
+		if entry.id and mob.npc then
+			measured, kills = ns.DropRate(entry.id, mob.npc, itemID)
+			seen[entry.id .. ":" .. mob.npc] = true
+		end
+		result[#result + 1] = {
+			instanceID = entry.id, npcID = mob.npc, name = mob.name, boss = src.boss,
+			where = ns.InstanceEntryName and ns.InstanceEntryName(entry) or entry.name or "",
+			rate = src.rate or (kills > 0 and measured or nil), kills = kills or 0,
+		}
 	end
-	table.sort(result, function(a, b) return (a.rate or 0) > (b.rate or 0) end)
+	for _, entry in ipairs(reverseIndex[itemID] or {}) do
+		if not seen[entry[1] .. ":" .. entry[2]] then
+			local data = Collector:Global().instances[entry[1]]
+			local npc = data.npcs[entry[2]]
+			local rate, kills = ns.DropRate(entry[1], entry[2], itemID)
+			result[#result + 1] = {
+				instanceID = entry[1], npcID = entry[2], name = npc.name or ("#" .. entry[2]), boss = npc.boss,
+				where = string.format("%s, %d %s", ns.InstanceName(entry[1]), kills or 0, L["kills"]),
+				rate = rate, kills = kills or 0,
+			}
+		end
+	end
+	table.sort(result, function(a, b)
+		if (a.boss and 1 or 0) ~= (b.boss and 1 or 0) then return a.boss and true or false end
+		return (a.rate or 0) > (b.rate or 0)
+	end)
 	return result
 end
 

@@ -124,10 +124,10 @@ local function OnItemTooltip(tooltip, data)
 		local sources = ns.ItemDropSources(itemID)
 		for i = 1, math.min(3, #sources) do
 			local src = sources[i]
-			local rate = src.rate and string.format("%.1f%%", src.rate) or "?"
+			local rate = src.rate and string.format(src.rate >= 1 and "%.1f%%" or "%.2f%%", src.rate) or "?"
 			tooltip:AddDoubleLine(
 				string.format("|cff33ccff%s|r %s", L["Drop:"], src.name),
-				string.format("%s |cff888888(%d %s, %s)|r", rate, src.kills, L["kills"], ns.InstanceName(src.instanceID)),
+				string.format("%s |cff888888(%s)|r", rate, src.where or ""),
 				1, 1, 1, 1, 1, 1)
 		end
 	end

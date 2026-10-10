@@ -19,14 +19,14 @@ taux de drop, rerolls, sacs, carte, campements, interface et sécurité.
 | Module | Ce qu'il fait |
 | --- | --- |
 | Montée 1-60 | Fenêtre d'XP : XP/heure, temps avant le niveau, repos, XP des quêtes prêtes à rendre. Acceptation et rendu automatiques des quêtes en option (Maj pour ignorer). |
-| Route d'XP | Route étape par étape choisie selon race, faction, classe et niveau. Les étapes avancent toutes seules (quête prise, finie, rendue, point atteint). Enregistreur de route pour écrire de nouvelles routes en jouant. |
+| Route d'XP | Assistant de quêtes : les prochaines quêtes à prendre, faire et rendre selon race, faction, classe et niveau, la plus proche d'abord, avec la flèche dessus. Donjons conseillés pour ton niveau. Routes écrites étape par étape et enregistreur de route. |
 | Flèche | Flèche vers l'étape ou le point de passage, avec la distance. `/fc way 45.2 61.8 Titre`. |
-| Carte | Coordonnées sur la carte et sous la minimap, notes personnelles (`/fc note`). |
+| Carte | Icônes sur la carte du monde (entrées de donjons et raids, quêtes à prendre et à rendre, objectifs, notes, campements), coordonnées, notes personnelles (`/fc note`). |
 | Campements | Durées des buffs de camp, campements retenus automatiquement. |
 | Rerolls et Legacy | Tous les personnages : niveau, or, métiers, verrouillages, objets, parcours 1-60 terminés. `/fc alts`, `/fc find`. |
 | Sacs | Vente des gris, réparation auto, niveau d'objet, objets « Utiliser » et « Équipé » marqués. |
 | Collecteur de drops | Mesure les taux de drop des boss et du trash à chaque cadavre fouillé. Export et import pour les partager. |
-| Guide des donjons et raids | Tous les donjons et raids, boss, butin, butin du trash, taux de drop, liste de souhaits avec alerte. |
+| Guide des donjons et raids | Tous les donjons et raids : chaque boss avec niveau, PV, butin et taux de drop, chaque monstre du trash avec son butin et ses taux, chemin vers l'entrée, liste de souhaits avec alerte. |
 | Interface | Barre d'infos (or, sacs, durabilité, latence, FPS), infobulles (niveau d'objet, qui le possède, où il tombe), liens web cliquables. |
 | Sécurité | Journal de mort, alertes de durabilité et de sacs, alertes de rares et d'élites dangereux (hors combat). |
 
@@ -48,19 +48,23 @@ taux de drop, rerolls, sacs, carte, campements, interface et sécurité.
 
 ## D'où viennent les données
 
-- **Boss et butin** : le Guide de l'aventurier du client quand il existe, sinon ce que le collecteur a vu.
-- **Taux de drop** : mesurés en jeu par le collecteur (`objets tombés / kills`), affichés avec le nombre
-  de kills. Les données partagées par les joueurs (`/fc drops export`) sont fusionnées à chaque version.
-  `Data/Instances.lua` peut recevoir des taux de référence vérifiés (`ns.DropRates`).
-- **Routes d'XP** : écrites depuis le vrai client Forever avec l'enregistreur (`/fc route record`), puis
+- **Donjons et raids** (`Data/InstanceDB.lua`) : boss, butin et taux de drop des boss d'après
+  [AtlasLootClassic](https://github.com/Hoizame/AtlasLootClassic) (GPL) ; points de vie, niveaux, monstres
+  du trash et taux de drop du trash d'après [CMaNGOS classic-db](https://github.com/cmangos/classic-db) (GPL v3).
+  Ce sont les données de Classic : Forever peut en modifier certaines.
+- **Quêtes** (`Data/QuestDB.lua`) : 3 011 quêtes de Classic avec donneur, rendu et zones d'objectifs, d'après CMaNGOS.
+  L'assistant de quêtes s'en sert quand aucune route écrite ne correspond.
+- **Taux mesurés** : le collecteur compte les objets tombés en jeu et les affiche à côté des taux de la base.
+  Les données partagées par les joueurs (`/fc drops export`) peuvent être fusionnées à chaque version.
+- **Routes d'XP écrites** : enregistrées sur le vrai client Forever avec `/fc route record`, puis
   ajoutées dans `Data/Routes/` (format décrit dans `Data/Routes.lua`).
 
 ## Publication sur CurseForge
 
 1. Créer le projet sur CurseForge et noter son identifiant : le mettre dans `## X-Curse-Project-ID` du `.toc`.
 2. Créer une clé API CurseForge et l'ajouter au dépôt GitHub comme secret `CF_API_KEY`.
-3. Pousser un tag (`git tag v1.0.0 && git push --tags`) : le workflow `.github/workflows/release.yml`
-   construit le zip avec le packager BigWigs et l'envoie sur CurseForge.
+3. Lancer le workflow `Release` (onglet Actions, « Run workflow », numéro de version) ou pousser un tag
+   `vX.Y.Z` : le workflow construit le zip avec le packager BigWigs et l'envoie sur CurseForge.
 
 ## À vérifier sur le client Forever
 
@@ -68,3 +72,7 @@ taux de drop, rerolls, sacs, carte, campements, interface et sécurité.
 - Les positions des entrées d'instance (`Data/Instances.lua`) utilisent les cartes de Classic.
 - Le système de campements n'a pas d'API documentée : les buffs de camp sont reconnus par leur nom
   (liste modifiable dans les options).
+
+## Licence
+
+GPL v3 (voir `LICENSE`), à cause des données reprises d'AtlasLootClassic et de CMaNGOS.

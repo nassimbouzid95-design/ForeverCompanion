@@ -17,7 +17,23 @@ local waypoint -- { mapID, x, y, title, owner }
 function ns.SetWaypoint(mapID, x, y, title, owner)
 	if not (mapID and x and y) then return end
 	waypoint = { mapID = mapID, x = x, y = y, title = title or "", owner = owner }
+	waypoint.continent, waypoint.wx, waypoint.wy = ns.MapToWorld(mapID, x, y)
 	if Arrow:IsEnabled() then Arrow:Refresh() end
+end
+
+-- Waypoint given in world coordinates (quest and instance databases use them).
+function ns.SetWorldWaypoint(continent, wx, wy, title, owner)
+	if not (continent and wx and wy) then return end
+	waypoint = { continent = continent, wx = wx, wy = wy, title = title or "", owner = owner }
+	-- Best map to show it on: the zone the player is in, if the point is there.
+	local here = C_Map.GetBestMapForUnit("player")
+	local x, y = ns.WorldToMap(continent, wx, wy, here)
+	if x then waypoint.mapID, waypoint.x, waypoint.y = here, x, y end
+	if Arrow:IsEnabled() then Arrow:Refresh() end
+end
+
+function ns.SameWaypoint(continent, wx, wy)
+	return waypoint and waypoint.continent == continent and waypoint.wx == wx and waypoint.wy == wy
 end
 
 function ns.ClearWaypoint(owner)
@@ -54,7 +70,7 @@ function Arrow:CreateFrame()
 	f:SetScript("OnEnter", function(frame)
 		GameTooltip:SetOwner(frame, "ANCHOR_BOTTOM")
 		GameTooltip:AddLine(waypoint and waypoint.title ~= "" and waypoint.title or L["Waypoint"])
-		if waypoint then
+		if waypoint and waypoint.mapID then
 			GameTooltip:AddLine(string.format("%s  %.1f, %.1f", ns.MapName(waypoint.mapID), waypoint.x * 100, waypoint.y * 100), 1, 1, 1)
 		end
 		GameTooltip:AddLine(L["Right-click to clear"], 0.7, 0.7, 0.7)
@@ -98,7 +114,7 @@ function Arrow:Refresh()
 	if waypoint then
 		self.frame.title:SetText(waypoint.title)
 		self.frame:Show()
-		if self:Settings().blizzardPin and C_Map.CanSetUserWaypointOnMap(waypoint.mapID) then
+		if self:Settings().blizzardPin and waypoint.mapID and C_Map.CanSetUserWaypointOnMap(waypoint.mapID) then
 			C_Map.SetUserWaypoint(UiMapPoint.CreateFromCoordinates(waypoint.mapID, waypoint.x, waypoint.y))
 			C_SuperTrack.SetSuperTrackedUserWaypoint(true)
 		end
@@ -111,16 +127,27 @@ end
 function Arrow:Update()
 	local f = self.frame
 	if not waypoint then f:Hide() return end
-	local px, py = ns.PlayerPositionOn(waypoint.mapID)
-	if not px then
-		-- Target is on another map, or position is hidden (instances).
+	local distance, angle
+	local continent, px, py = ns.PlayerWorldPosition()
+	if continent and waypoint.continent then
+		if continent ~= waypoint.continent then
+			f.arrow:SetRotation(0)
+			f.arrow:SetVertexColor(0.6, 0.6, 0.6)
+			f.dist:SetText(string.format(L["Go to %s"], ns.CONTINENT_NAMES[waypoint.continent] or "?"))
+			return
+		end
+		distance, angle = ns.WorldVector(px, py, waypoint.wx, waypoint.wy)
+	elseif waypoint.mapID then
+		local mx, my = ns.PlayerPositionOn(waypoint.mapID)
+		if mx then distance, angle = ns.MapVector(waypoint.mapID, mx, my, waypoint.x, waypoint.y) end
+	end
+	if not distance then
+		-- Position hidden (inside an instance) or unknown.
 		f.arrow:SetRotation(0)
 		f.arrow:SetVertexColor(0.6, 0.6, 0.6)
-		f.dist:SetText(string.format(L["Go to %s"], ns.MapName(waypoint.mapID)))
+		f.dist:SetText(waypoint.mapID and string.format(L["Go to %s"], ns.MapName(waypoint.mapID)) or "")
 		return
 	end
-	local distance, angle = ns.MapVector(waypoint.mapID, px, py, waypoint.x, waypoint.y)
-	if not distance then return end
 	local facing = GetPlayerFacing()
 	if facing and not ns.IsSecret(facing) then
 		f.arrow:SetRotation(angle - facing)

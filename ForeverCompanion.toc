@@ -8,7 +8,7 @@
 ## SavedVariables: ForeverCompanionDB
 ## OptionalDeps: Ace3, LibDBIcon-1.0, LibSharedMedia-3.0
 ## X-Category: Quests & Leveling
-## X-License: MIT
+## X-License: GPLv3
 ## X-Curse-Project-ID: 1736958
 
 #@no-lib-strip@
@@ -24,6 +24,8 @@ Core\Minimap.lua
 Core\Options.lua
 
 Data\Instances.lua
+Data\InstanceDB.lua
+Data\QuestDB.lua
 Data\Routes.lua
 
 Modules\Leveling.lua

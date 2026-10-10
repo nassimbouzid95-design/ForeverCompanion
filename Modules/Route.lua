@@ -9,6 +9,10 @@ local Route = ns.NewModule("Route", {
 	point = { "RIGHT", "UIParent", "RIGHT", -60, 120 },
 	style = "quests",
 	autoArrow = true,
+	assistantCount = 5,
+	questLevelsBelow = 5,
+	questLevelsAbove = 2,
+	suggestDungeons = true,
 }, {
 	recorded = {}, -- [name] = route
 	imported = {}, -- list of routes pasted by the player
@@ -45,6 +49,169 @@ end
 
 local function TurnedIn(questID)
 	return C_QuestLog.IsQuestFlaggedCompleted(questID)
+end
+
+---------------------------------------------------------------------------
+-- Quest assistant: when no written route fits, the next steps come from the quest database
+-- (quests you can pick up, objectives of quests in your log, quests ready to turn in), sorted by distance.
+---------------------------------------------------------------------------
+local Assistant = { pickups = {}, active = {}, steps = {}, ignored = {} }
+ns.QuestAssistant = Assistant
+
+local function HasBit(mask, bitValue)
+	return mask % (bitValue + bitValue) >= bitValue
+end
+
+local exclusiveGroups
+local function ExclusiveGroups()
+	if exclusiveGroups then return exclusiveGroups end
+	exclusiveGroups = {}
+	for id, q in pairs(ns.QuestDB or {}) do
+		local group = q[15]
+		if group and group > 0 then
+			exclusiveGroups[group] = exclusiveGroups[group] or {}
+			table.insert(exclusiveGroups[group], id)
+		end
+	end
+	return exclusiveGroups
+end
+
+function Assistant:Title(questID)
+	local title = C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(questID)
+	if title and title ~= "" and not ns.IsSecret(title) then return title end
+	local q = ns.QuestDB[questID]
+	return q and q[7] or ("#" .. questID)
+end
+
+function Assistant:IsDone(questID)
+	local done = self.done[questID]
+	if done == nil then
+		done = C_QuestLog.IsQuestFlaggedCompleted(questID) and true or false
+		self.done[questID] = done
+	end
+	return done
+end
+
+-- Heavy pass: which quests can this character pick up now, and which are in the log. Runs on quest events.
+function Assistant:Rebuild()
+	local db = ns.QuestDB
+	if not db then return end
+	self.done = {}
+	if C_QuestLog.GetAllCompletedQuestIDs then
+		for _, id in ipairs(C_QuestLog.GetAllCompletedQuestIDs() or {}) do self.done[id] = true end
+	end
+	local _, _, raceID = UnitRace("player")
+	local _, _, classID = UnitClass("player")
+	local faction = UnitFactionGroup("player")
+	local side = faction == "Alliance" and 1 or faction == "Horde" and 2 or 0
+	local raceBit = raceID and raceID >= 1 and raceID <= 8 and 2 ^ (raceID - 1) or nil
+	local classBit = classID and 2 ^ (classID - 1)
+	local level = UnitLevel("player")
+	local s = Route:Settings()
+
+	wipe(self.active)
+	local inLog = {}
+	for i = 1, C_QuestLog.GetNumQuestLogEntries() do
+		local info = C_QuestLog.GetInfo(i)
+		if info and info.questID and not info.isHeader then
+			inLog[info.questID] = true
+			if db[info.questID] then
+				self.active[#self.active + 1] = { id = info.questID, complete = C_QuestLog.IsComplete(info.questID) }
+			end
+		end
+	end
+
+	wipe(self.pickups)
+	local groups = ExclusiveGroups()
+	for id, q in pairs(db) do
+		local qLevel = q[1] > 0 and q[1] or level
+		if not inLog[id] and q[2] <= level and qLevel >= level - s.questLevelsBelow and qLevel <= level + s.questLevelsAbove
+			and (q[6] == 0 or q[6] == side)
+			and (q[3] == 0 or not raceBit or HasBit(q[3], raceBit))
+			and (q[4] == 0 or not classBit or HasBit(q[4], classBit))
+			and (q[5] == 0 or (q[5] > 0 and self:IsDone(q[5])) or (q[5] < 0 and inLog[-q[5]]))
+			and not self:IsDone(id) then
+			local ok = true
+			local group = q[15] and q[15] > 0 and groups[q[15]]
+			if group then
+				for _, other in ipairs(group) do
+					if other ~= id and (inLog[other] or self:IsDone(other)) then ok = false break end
+				end
+			end
+			if ok then self.pickups[#self.pickups + 1] = id end
+		end
+	end
+end
+
+local function Nearest(continent, px, py, cont, x, y)
+	if cont ~= continent then return 1e6 end
+	local dx, dy = x - px, y - py
+	return math.sqrt(dx * dx + dy * dy)
+end
+
+-- Light pass: distances from the player, best steps first. Runs every few seconds.
+function Assistant:Sort()
+	local db = ns.QuestDB
+	local steps = wipe(self.steps)
+	local continent, px, py = ns.PlayerWorldPosition()
+	if not continent then
+		-- Position unknown (in an instance): keep the order by level.
+		continent, px, py = -1, 0, 0
+	end
+	local function add(kind, id, cont, x, y, weight)
+		if self.ignored[kind .. id] then return end
+		local dist = Nearest(continent, px, py, cont, x, y)
+		steps[#steps + 1] = { kind = kind, id = id, cont = cont, x = x, y = y, dist = dist, score = dist * weight }
+	end
+	for _, a in ipairs(self.active) do
+		local q = db[a.id]
+		if a.complete then
+			add("turnin", a.id, q[11], q[12], q[13], 0.6)
+		else
+			local objectives, best, bx, by, bc = q[14], nil, nil, nil, nil
+			for i = 1, #objectives, 3 do
+				local d = Nearest(continent, px, py, objectives[i], objectives[i + 1], objectives[i + 2])
+				if not best or d < best then best, bc, bx, by = d, objectives[i], objectives[i + 1], objectives[i + 2] end
+			end
+			if bc then add("complete", a.id, bc, bx, by, 0.85) end
+		end
+	end
+	for _, id in ipairs(self.pickups) do
+		local q = db[id]
+		add("accept", id, q[8], q[9], q[10], 1)
+	end
+	table.sort(steps, function(a, b) return a.score < b.score end)
+	return steps
+end
+
+function Assistant:Best()
+	return self.steps[1]
+end
+
+function Assistant:StepLine(step)
+	local q = ns.QuestDB[step.id]
+	local color = step.kind == "turnin" and "ff33ff33" or step.kind == "complete" and "ff66ccff" or "ffffd100"
+	local label = step.kind == "turnin" and L["Turn in"] or step.kind == "complete" and L["Do"] or L["Accept"]
+	local dist = step.dist >= 1e6 and (ns.CONTINENT_NAMES[step.cont] or "?") or string.format(L["%d yards"], step.dist)
+	return string.format("|c%s%s|r [%d] %s |cff888888- %s|r", color, label, q[1] > 0 and q[1] or UnitLevel("player"), self:Title(step.id), dist)
+end
+
+-- Dungeons that fit the player's level, nearest entrance first.
+function Assistant:SuggestedDungeons()
+	local level = UnitLevel("player")
+	local continent, px, py = ns.PlayerWorldPosition()
+	local list, seen = {}, {}
+	for _, entry in ipairs(ns.InstanceDB or {}) do
+		local where = entry.id and ns.Instances[entry.id]
+		if entry.kind == "dungeon" and level >= entry.min - 2 and level <= entry.max - 2 and where and not seen[entry.id] then
+			seen[entry.id] = true
+			local cont, wx, wy = ns.MapToWorld(where.zone, where.x, where.y)
+			local dist = (cont and continent) and Nearest(continent, px, py, cont, wx, wy) or 1e6
+			list[#list + 1] = { entry = entry, where = where, dist = dist }
+		end
+	end
+	table.sort(list, function(a, b) return a.dist < b.dist end)
+	return list
 end
 
 ---------------------------------------------------------------------------
@@ -102,7 +269,9 @@ function Route:Advance()
 	self.route = route
 	if not route then
 		self.skipped = 0
-		self:UpdateWindow()
+		Assistant:Rebuild()
+		self:Refresh()
+		if ns.RefreshMapPins then ns.RefreshMapPins() end
 		return
 	end
 	local state = CharState()
@@ -128,7 +297,29 @@ function Route:CurrentStep()
 	return self.route.steps[CharState().step], CharState().step
 end
 
+-- Re-sorts the assistant by distance and points the arrow at its best step.
+function Route:Refresh()
+	if self.route then return end
+	Assistant:Sort()
+	self:UpdateWaypoint()
+	self:UpdateWindow()
+end
+
 function Route:UpdateWaypoint()
+	if not self.route then
+		-- Never take over a waypoint the player or the guide placed.
+		local current = ns.GetWaypoint()
+		if current and current.owner ~= OWNER then return end
+		local best = Assistant:Best()
+		if best and best.dist < 1e6 and self:Settings().autoArrow then
+			if not ns.SameWaypoint(best.cont, best.x, best.y) then
+				ns.SetWorldWaypoint(best.cont, best.x, best.y, Assistant:Title(best.id), OWNER)
+			end
+		elseif self:Settings().autoArrow then
+			ns.ClearWaypoint(OWNER)
+		end
+		return
+	end
 	local step = self:CurrentStep()
 	if step and step.map and step.x and step.y and self:Settings().autoArrow then
 		ns.SetWaypoint(step.map, step.x, step.y, self:StepText(step, true), OWNER)
@@ -138,6 +329,13 @@ function Route:UpdateWaypoint()
 end
 
 function Route:MarkCurrentDone()
+	if not self.route then
+		-- Assistant: skip this target until the next reload.
+		local best = Assistant:Best()
+		if best then Assistant.ignored[best.kind .. best.id] = true end
+		self:Refresh()
+		return
+	end
 	local step, index = self:CurrentStep()
 	if not step then return end
 	CharState().manualDone[self.route.id .. ":" .. index] = true
@@ -154,6 +352,7 @@ function Route:Back()
 end
 
 ns.arrivalCallbacks[OWNER] = function()
+	if not Route.route then return end -- assistant: the next quest event moves the arrow
 	local step = Route:CurrentStep()
 	if step and step[1] == "goto" then
 		Route:MarkCurrentDone()
@@ -218,7 +417,7 @@ end
 function Route:CreateWindow()
 	if self.frame then return end
 	local f = CreateFrame("Frame", "ForeverCompanionRouteFrame", UIParent, "BackdropTemplate")
-	f:SetSize(300, 120)
+	f:SetSize(340, 120)
 	f:SetBackdrop({
 		bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
 		edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -271,6 +470,26 @@ function Route:CreateWindow()
 	f.back:SetPoint("BOTTOMLEFT", 8, 8)
 	f.skip = MakeButton(L["Done"], function() self:MarkCurrentDone() end)
 	f.skip:SetPoint("BOTTOMRIGHT", -8, 8)
+	f.skip:SetScript("OnEnter", function(b)
+		GameTooltip:SetOwner(b, "ANCHOR_TOP")
+		GameTooltip:AddLine(self.route and L["Mark this step as done"] or L["Skip this quest and point to the next one"])
+		GameTooltip:Show()
+	end)
+	f.skip:SetScript("OnLeave", GameTooltip_Hide)
+	f.dungeon = MakeButton(L["Dungeon"], function()
+		local target = f.dungeonTarget
+		if target then
+			ns.SetWaypoint(target.where.zone, target.where.x, target.where.y, target.entry.name or ns.InstanceName(target.entry.id), "guide")
+		end
+	end)
+	f.dungeon:SetWidth(90)
+	f.dungeon:SetPoint("BOTTOM", 0, 8)
+	f.dungeon:SetScript("OnEnter", function(b)
+		GameTooltip:SetOwner(b, "ANCHOR_TOP")
+		GameTooltip:AddLine(L["Point the arrow to the nearest dungeon for your level"])
+		GameTooltip:Show()
+	end)
+	f.dungeon:SetScript("OnLeave", GameTooltip_Hide)
 
 	self.frame = f
 end
@@ -289,17 +508,44 @@ function Route:UpdateWindow()
 	f:Show()
 	local recording = CharState().recording
 	if not self.route then
-		f.title:SetText(L["XP route"])
+		f.title:SetText(L["Next quests"])
 		f.progress:SetText("")
+		local lines = {}
 		if recording then
-			f.body:SetText(string.format(L["Recording a route: %d steps so far. /fc route stop to finish."], #recording.steps))
-		else
-			f.body:SetText(L["No route available yet for this character at this level. Routes are added with updates; you can record your own with /fc route record."])
+			lines[#lines + 1] = "|cffff6666" .. string.format(L["Recording a route: %d steps so far. /fc route stop to finish."], #recording.steps) .. "|r"
 		end
-		f.nextStep:SetText("")
+		for i = 1, math.min(s.assistantCount, #Assistant.steps) do
+			lines[#lines + 1] = Assistant:StepLine(Assistant.steps[i])
+		end
+		if #Assistant.steps == 0 then
+			lines[#lines + 1] = "|cff888888" .. L["No quest found around your level. Try another zone or a dungeon."] .. "|r"
+		end
+		local best = Assistant:Best()
+		if best and best.kind == "complete" and C_QuestLog.GetQuestObjectives then
+			for _, obj in ipairs(C_QuestLog.GetQuestObjectives(best.id) or {}) do
+				if obj.text and not ns.IsSecret(obj.text) then
+					lines[#lines + 1] = (obj.finished and "|cff33ff33" or "|cffbbbbbb") .. "   - " .. obj.text .. "|r"
+				end
+			end
+		end
+		f.body:SetText(table.concat(lines, "\n"))
+		local dungeons = s.suggestDungeons and Assistant:SuggestedDungeons() or {}
+		if dungeons[1] then
+			local names = {}
+			for i = 1, math.min(3, #dungeons) do
+				local e = dungeons[i].entry
+				names[#names + 1] = string.format("%s (%d-%d)", e.name or ns.InstanceName(e.id), e.min, e.max)
+			end
+			f.nextStep:SetText(L["Dungeons for your level:"] .. " " .. table.concat(names, ", "))
+		else
+			f.nextStep:SetText("")
+		end
+		f.dungeon:SetShown(dungeons[1] ~= nil)
+		f.dungeonTarget = dungeons[1]
 		f.back:Hide()
-		f.skip:Hide()
+		f.skip:SetShown(best ~= nil)
 	else
+		f.dungeon:Hide()
 		local state = CharState()
 		local step = self.route.steps[state.step]
 		f.title:SetText(self.route.name or self.route.id)
@@ -438,10 +684,17 @@ function Route:OnEnable()
 	self:RegisterEvent("QUEST_LOG_UPDATE")
 	self:RegisterEvent("PLAYER_LEVEL_UP", function() C_Timer.After(0.5, function() self:Advance() end) end)
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "Advance")
+	self:RegisterEvent("ZONE_CHANGED_NEW_AREA", "Refresh")
 	self:Advance()
+	if not self.ticker then
+		self.ticker = C_Timer.NewTicker(2, function()
+			if self:IsEnabled() and not self.route then self:Refresh() end
+		end)
+	end
 end
 
 function Route:OnDisable()
+	if self.ticker then self.ticker:Cancel() self.ticker = nil end
 	ns.ClearWaypoint(OWNER)
 	if self.frame then self.frame:Hide() end
 end
@@ -502,6 +755,10 @@ function Route:GetOptions()
 			locked = { type = "toggle", order = 2, name = L["Lock position"] },
 			scale = { type = "range", order = 3, name = L["Scale"], min = 0.5, max = 2, step = 0.05 },
 			autoArrow = { type = "toggle", order = 4, width = "full", name = L["Point the arrow at each step automatically"] },
+			assistantCount = { type = "range", order = 6, name = L["Quests listed"], min = 1, max = 10, step = 1 },
+			questLevelsBelow = { type = "range", order = 7, name = L["Quests up to N levels below mine"], min = 0, max = 15, step = 1 },
+			questLevelsAbove = { type = "range", order = 8, name = L["Quests up to N levels above mine"], min = 0, max = 6, step = 1 },
+			suggestDungeons = { type = "toggle", order = 9, width = "full", name = L["Suggest dungeons for my level"] },
 			style = {
 				type = "select", order = 5, name = L["Route style"],
 				values = { quests = L["Quests only"], dungeons = L["Quests and dungeons"], fastest = L["Fastest"] },
