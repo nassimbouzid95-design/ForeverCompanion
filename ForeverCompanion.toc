@@ -1,0 +1,39 @@
+## Interface: 16001
+## Title: |cff33ccffForever|rCompanion
+## Notes: The complete out-of-combat companion for WoW Forever: XP routes, dungeon & raid guide with drop rates, alts, bags, map, camps and more.
+## Notes-frFR: Le compagnon complet hors combat pour WoW Forever : routes d'XP, guide des donjons et raids avec taux de drop, rerolls, sacs, carte, campements et plus.
+## Author: Nassim
+## Version: @project-version@
+## IconTexture: Interface\Icons\INV_Misc_Map_01
+## SavedVariables: ForeverCompanionDB
+## OptionalDeps: Ace3, LibDBIcon-1.0, LibSharedMedia-3.0
+## X-Category: Quests & Leveling
+## X-License: MIT
+## X-Curse-Project-ID: 000000
+
+#@no-lib-strip@
+embeds.xml
+#@end-no-lib-strip@
+
+Locales\enUS.lua
+Locales\frFR.lua
+
+Core\Init.lua
+Core\Core.lua
+Core\Minimap.lua
+Core\Options.lua
+
+Data\Instances.lua
+Data\Routes.lua
+
+Modules\Leveling.lua
+Modules\Arrow.lua
+Modules\Route.lua
+Modules\Map.lua
+Modules\Camps.lua
+Modules\Alts.lua
+Modules\Bags.lua
+Modules\LootCollector.lua
+Modules\DungeonGuide.lua
+Modules\Interface.lua
+Modules\Safety.lua
