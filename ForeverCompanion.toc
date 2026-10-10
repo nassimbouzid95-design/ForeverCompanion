@@ -17,6 +17,11 @@ embeds.xml
 
 Locales\enUS.lua
 Locales\frFR.lua
+Locales\deDE.lua
+Locales\esES.lua
+Locales\ptBR.lua
+Locales\itIT.lua
+Locales\ruRU.lua
 
 Core\Init.lua
 Core\UI.lua
@@ -25,6 +30,7 @@ Core\Minimap.lua
 Core\Options.lua
 
 Data\Instances.lua
+Data\Zones.lua
 Data\InstanceDB.lua
 Data\QuestDB.lua
 Data\Routes.lua
@@ -38,5 +44,8 @@ Modules\Alts.lua
 Modules\Bags.lua
 Modules\LootCollector.lua
 Modules\DungeonGuide.lua
+Modules\Economy.lua
+Modules\PvP.lua
 Modules\Interface.lua
 Modules\Safety.lua
+Modules\Hardcore.lua

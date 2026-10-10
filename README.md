@@ -1,7 +1,7 @@
 # ForeverCompanion
 
 Le compagnon complet hors combat pour **WoW Forever** (le Classic+ officiel de Blizzard).
-*The complete out-of-combat companion for WoW Forever. English and French.*
+*The complete out-of-combat companion for WoW Forever. English, French, German, Spanish, Portuguese, Italian and Russian.*
 
 WoW Forever applique les restrictions d'addons de Midnight : aucun addon ne peut lire le combat.
 ForeverCompanion se concentre donc sur tout le reste : montée, routes d'XP, donjons et raids avec
@@ -27,6 +27,9 @@ taux de drop, rerolls, sacs, carte, campements, interface et sécurité.
 | Sacs | Vente des gris, réparation auto, niveau d'objet, objets « Utiliser » et « Équipé » marqués. |
 | Collecteur de drops | Mesure les taux de drop des boss et du trash à chaque cadavre fouillé. Export et import pour les partager. |
 | Guide des donjons et raids | Tous les donjons et raids : chaque boss avec niveau, PV, butin et taux de drop, chaque monstre du trash avec son butin et ses taux, chemin vers l'entrée, liste de souhaits avec alerte. |
+| Économie | Prix de l'hôtel des ventes (scan complet toutes les 15 min et prix vus en parcourant), prix dans les infobulles, historique de l'or sur 30 jours, d'où vient l'or et où il part, recettes de tous les personnages avec coût et bénéfice, liste de courses. `/fc eco`. |
+| JcJ | Résultats des champs de bataille, honneur par heure, statistiques par champ de bataille. `/fc pvp`. |
+| Hardcore | Alertes de zones et de cibles dangereuses, panneau de survie, vérifications avant un donjon. `/fc hc`. |
 | Interface | Barre d'infos (or, sacs, durabilité, latence, FPS), infobulles (niveau d'objet, qui le possède, où il tombe), liens web cliquables. |
 | Sécurité | Journal de mort, alertes de durabilité et de sacs, alertes de rares et d'élites dangereux (hors combat). |
 
@@ -35,7 +38,11 @@ taux de drop, rerolls, sacs, carte, campements, interface et sécurité.
 ```
 /fc               options
 /fc help          toutes les commandes
+/fc menu          menu de toutes les fenêtres (aussi au clic sur le bouton de la minimap)
 /fc guide         guide des donjons et raids
+/fc eco [scan]    économie (prix HV, or, métiers, liste de courses)
+/fc pvp           statistiques JcJ
+/fc hc            mode Hardcore
 /fc route         fenêtre de route (record, stop, note, goto, train, export, lua, import, reset)
 /fc way x y       point de passage
 /fc note <texte>  note sur la carte

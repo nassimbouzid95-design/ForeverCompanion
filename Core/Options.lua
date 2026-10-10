@@ -17,6 +17,9 @@ local moduleLabels = {
 	DungeonGuide = L["Dungeon & raid guide"],
 	Interface = L["Interface"],
 	Safety = L["Open-world safety"],
+	Economy = L["Economy"],
+	PvP = L["PvP"],
+	Hardcore = L["Hardcore"],
 }
 ns.moduleLabels = moduleLabels
 
@@ -32,6 +35,9 @@ local moduleDescriptions = {
 	DungeonGuide = L["Every dungeon and raid with bosses, loot, trash loot and drop rates."],
 	Interface = L["Info bar, richer tooltips and chat improvements."],
 	Safety = L["Death log, durability and bag warnings, dangerous mob alerts."],
+	Economy = L["Auction prices, where your gold goes, recipes with cost and profit, shopping list."],
+	PvP = L["Battleground results, honor per hour and statistics."],
+	Hardcore = L["Warnings for dangerous zones and targets, survival panel, dungeon checklist."],
 }
 
 local function BuildOptions()

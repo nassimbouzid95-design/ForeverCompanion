@@ -1,5 +1,15 @@
 # ForeverCompanion
 
+## v2.0.0
+
+The final version: economy, PvP, hardcore and five new languages.
+
+- Economy: auction house prices from a full scan (`/fc eco scan`) and from every search you make, 14-day average, crafting cost and profit in item tooltips, vendor prices, a gold ledger by source (loot, quests, vendor, auction house, mail, repairs...), your recipes with their cost, a shopping list and a 30-day gold chart.
+- PvP: battleground results, honor and honorable kills per session and per battleground, win rate, a session panel (`/fc pvp`).
+- Hardcore: warnings for zones and targets too dangerous for your level and for enemy territory, a danger badge on the target, a survival panel (deaths, healing potions, bandages, food, drinks, hearthstone, durability), a pre-pull checklist and your death history (`/fc hc`).
+- New menu on the minimap button: guide, next quests, economy, PvP, hardcore, characters, options (`/fc menu`).
+- Now in German, Spanish, Portuguese, Italian and Russian, in addition to English and French.
+
 ## v1.2.0
 
 New look for the whole addon: bigger text, dark panels with a cyan accent, gold titles.

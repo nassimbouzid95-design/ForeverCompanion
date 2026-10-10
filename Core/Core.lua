@@ -27,7 +27,7 @@ FC:SetDefaultModulePrototype({
 -- Order and labels used by the options panel.
 ns.moduleOrder = {
 	"Leveling", "Route", "Arrow", "Map", "Camps", "Alts", "Bags",
-	"LootCollector", "DungeonGuide", "Interface", "Safety",
+	"LootCollector", "DungeonGuide", "Economy", "PvP", "Hardcore", "Interface", "Safety",
 }
 
 -- Creates a module and registers its default settings. enabledByDefault defaults to true.

@@ -351,4 +351,28 @@ print("bags", pcall(function() FC:GetModule("Bags"):RefreshVisible() end), btn.f
 print("alts", pcall(function() FC:GetModule("Alts"):ShowWindow() end))
 print("deaths", pcall(function() FireEvent("PLAYER_DEAD"); FC:SlashCommand("deaths") end))
 print("dropexport", pcall(function() FC:SlashCommand("drops export") end))
+-- Economy
+local Eco = FC:GetModule("Economy")
+GetMoney = function() return 20000 end
+FireEvent("MERCHANT_SHOW")
+FireEvent("PLAYER_MONEY")
+GetMoney = function() return 15000 end
+FireEvent("PLAYER_MONEY")
+Eco:RecordPrice(5193, 12345, true)
+Eco:RecordPrice(2589, 50, true)
+Eco:Global().recipes["Nassim-Forever"] = { r1 = { name = "Linen Bandage", prof = "First Aid", out = 1251, n = 1, r = { 2589, 1 } } }
+Eco:AddToShopping("Nassim-Forever", "r1", 3)
+print("eco price", ns.AuctionPrice(5193), "cost", Eco:RecipeCost(Eco:Global().recipes["Nassim-Forever"].r1))
+Eco:OnTooltip(GameTooltip, { id = 1251 })
+for _, tab in ipairs({ "gold", "prices", "crafts", "shopping" }) do
+	print("eco tab", tab, pcall(function() Eco:Toggle(tab) end))
+end
+Eco.filter = "lin"
+print("eco filter", pcall(Eco.Render, Eco))
+for _, c in ipairs{"hc", "hc panel", "hc check", "hc", "pvp", "pvp", "menu"} do
+	print("cmd", c, pcall(FC.SlashCommand, FC, c))
+end
+print("hc danger", pcall(ns.HardcoreDanger, "target"))
+print("eco scan", pcall(Eco.StartScan, Eco))
+print("hub", pcall(ns.ToggleHub, UIParent), pcall(ns.ToggleHub))
 print("END")
