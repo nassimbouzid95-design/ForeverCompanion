@@ -20,6 +20,7 @@ local Map = ns.NewModule("Map", {
 -- Coordinates
 ---------------------------------------------------------------------------
 function Map:FormatCoords(x, y)
+	if type(x) ~= "number" or type(y) ~= "number" or ns.AnySecret(x, y) then return "" end
 	local fmt = "%." .. self:Settings().decimals .. "f, %." .. self:Settings().decimals .. "f"
 	return string.format(fmt, x * 100, y * 100)
 end
@@ -39,8 +40,9 @@ function Map:CreateWorldMapCoords()
 		elapsed = 0
 		local parts = {}
 		local mapID = WorldMapFrame:GetMapID()
-		local px, py = mapID and ns.PlayerPositionOn(mapID)
-		if px then parts[#parts + 1] = L["Player"] .. ": " .. self:FormatCoords(px, py) end
+		local px, py
+		if mapID then px, py = ns.PlayerPositionOn(mapID) end
+		if px and py then parts[#parts + 1] = L["Player"] .. ": " .. self:FormatCoords(px, py) end
 		local cx, cy = WorldMapFrame:GetNormalizedCursorPosition()
 		if cx and cx >= 0 and cx <= 1 and cy >= 0 and cy <= 1 and WorldMapFrame.ScrollContainer:IsMouseOver() then
 			parts[#parts + 1] = L["Cursor"] .. ": " .. self:FormatCoords(cx, cy)
@@ -65,7 +67,7 @@ function Map:CreateMinimapCoords()
 		if elapsed < 0.2 then return end
 		elapsed = 0
 		local _, x, y = ns.PlayerMapPosition()
-		text:SetText(x and self:FormatCoords(x, y) or "")
+		text:SetText(self:FormatCoords(x, y))
 	end)
 	self.miniText = holder
 end

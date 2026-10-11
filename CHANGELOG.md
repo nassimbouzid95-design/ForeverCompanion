@@ -1,5 +1,9 @@
 # ForeverCompanion
 
+## v2.3.1
+
+- Fixed a Lua error on the world map (Map.lua:24) that repeated while the map was open: the player coordinates were read wrong.
+
 ## v2.3.0
 
 - Best gear: the 5 best items for each slot instead of one, best first, every 5 levels for your class and faction, each with how to get it (quest with its giver, dungeon boss, vendor or crafting). Rings and trinkets: wear the first two.
