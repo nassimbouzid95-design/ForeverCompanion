@@ -1,5 +1,11 @@
 # ForeverCompanion
 
+## v2.3.0
+
+- Best gear: the 5 best items for each slot instead of one, best first, every 5 levels for your class and faction, each with how to get it (quest with its giver, dungeon boss, vendor or crafting). Rings and trinkets: wear the first two.
+- The new WoW Forever dungeons are now in the gear lists and in the dungeon guide: Hall of Thanes, Ruins of Lordaeron, Excavation Site: Wetlands, City of Dalaran and The Drowned City, with their bosses, loot (stats from Wowhead's WoW Forever database) and dungeon quests with their rewards and givers. Krol'dok Stronghold, Alcaz Prison, Blackmaw Hold and Shaper's Terrace are listed with their levels and zone; their loot is not published yet. Items without published stats are ranked from their item level and type, and marked as such.
+- The entrance of the new dungeons can be shown with the arrow. A new dungeon gets its instance ID the first time you go in, so the drop collector measures its drop rates.
+
 ## v2.2.0
 
 New leveling guide in the spirit of RestedXP (`/fc lvl`, or the minimap menu).

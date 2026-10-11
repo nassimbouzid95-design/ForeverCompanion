@@ -120,7 +120,8 @@ CONFIGS = {
 SLOT_OF_INV = {1: 'head', 2: 'neck', 3: 'shoulder', 5: 'chest', 20: 'chest', 6: 'waist', 7: 'legs', 8: 'feet',
                9: 'wrist', 10: 'hands', 11: 'finger', 12: 'trinket', 16: 'back'}
 SLOTS = ['head', 'neck', 'shoulder', 'back', 'chest', 'wrist', 'hands', 'waist', 'legs', 'feet',
-         'finger1', 'finger2', 'trinket1', 'trinket2', 'mainhand', 'offhand', 'ranged']
+         'finger', 'trinket', 'mainhand', 'offhand', 'ranged']
+TOP = 5  # items listed per slot
 
 RAID_KINDS = {'raid', 'world'}
 BG_FACTIONS = {509, 510, 729, 730, 889, 890}
@@ -295,8 +296,39 @@ class Items:
         for r in table(db, 'item_template'):
             self.it[int(r['entry'])] = r
         self.spells = {int(r['Id']): r for r in table(db, 'spell_template')}
+        self.extra = {}       # Forever items: iid -> dict(stats=Counter or None)
+        self._est = {}        # (iid, cls, role) -> estimated score
+        self._index = None
+
+    def estimate(self, iid, cls, role):
+        """Score of an item whose stats are unknown: median score of 1.12 items of the same slot, armor or
+        weapon type, quality and item level (+-2).  Only the item type and level are known, so it is a guess."""
+        key = (iid, cls, role)
+        if key in self._est: return self._est[key]
+        if self._index is None:
+            self._index = collections.defaultdict(list)
+            for i, r in self.it.items():
+                if i in self.extra or int(r['RandomProperty']) or int(r['Quality']) not in (2, 3, 4): continue
+                if BAD_NAME.search(r['name']): continue
+                inv = int(r['InventoryType']); inv = 5 if inv == 20 else inv
+                self._index[(int(r['class']), int(r['subclass']), inv, int(r['Quality']))].append((int(r['ItemLevel']), i))
+        r = self.it[iid]; inv = int(r['InventoryType']); inv = 5 if inv == 20 else inv
+        q = int(r['Quality']); il = int(r['ItemLevel'])
+        pool = []
+        for qq in (q, 3 if q == 2 else 2):
+            pool = [i for lv, i in self._index.get((int(r['class']), int(r['subclass']), inv, qq), []) if abs(lv - il) <= 2]
+            if len(pool) >= 3: break
+        if not pool: self._est[key] = 0; return 0
+        sc = sorted(self.score(i, cls, role) for i in pool)
+        v = sc[len(sc) // 2] * 0.9
+        self._est[key] = v
+        return v
 
     def stats(self, iid, cls):
+        if iid in self.extra:
+            s = collections.Counter({k: v for k, v in (self.extra[iid]['stats'] or {}).items() if v and k not in ('dps', 'speed')})
+            if (self.extra[iid]['stats'] or {}).get('dps'): s['wdps'] = float(self.extra[iid]['stats']['dps'])
+            return s
         r = self.it[iid]; s = collections.Counter()
         for k in range(1, 11):
             t = int(r[f'stat_type{k}']); v = int(r[f'stat_value{k}'])
@@ -318,6 +350,7 @@ class Items:
 
     def score(self, iid, cls, role=None):
         """role: 'mh', 'oh', '2h', 'ranged' for weapons; None for armor/jewelry."""
+        if iid in self.extra and not self.extra[iid]['stats']: return self.estimate(iid, cls, role)
         w = W[cls]; s = self.stats(iid, cls); r = self.it[iid]
         sc = sum(w.get(k, 0) * v for k, v in s.items() if k not in ('wdps', 'proc'))
         # spell damage of the right school only counts once: all-school + the spec's school
@@ -332,6 +365,148 @@ class Items:
             sc += 0.15 * int(r['ItemLevel']) * (0.5 if role == 'oh' else 1)
         if cls == 'ROGUE' and role in ('mh', 'oh') and sub == 7: sc *= 1.03  # Combat: Sword Specialization
         return sc
+
+# ---------------------------------------------------------------- new WoW Forever dungeons
+# v2-data/forever_dungeons.json: the new Forever dungeons (bosses, loot, dungeon quests) as listed by the
+# fan sites (zockify, wowtbc.gg, wclbox).  Most of their items have no published stats: those are ranked
+# with Items.estimate().  Items without a known ID get a negative internal ID and are written by name.
+FOREVER_JSON = os.environ.get('FOREVER_JSON') or next((p for p in (os.path.join(HERE, 'data', 'forever_dungeons.json'), os.path.join(HERE, '..', 'v2-data', 'forever_dungeons.json')) if os.path.exists(p)), '')
+FOREVER_ITEMS = {}
+ARMOR_SUB = {'cloth': 1, 'leather': 2, 'mail': 3, 'plate': 4, 'shield': 6}
+WEAPON_SUB = {'axe': (0, 1), 'mace': (4, 5), 'sword': (7, 8), 'polearm': (6, 6), 'staff': (10, 10), 'fist': (13, 13),
+              'fist weapon': (13, 13), 'dagger': (15, 15), 'bow': (2, 2), 'gun': (3, 3), 'crossbow': (18, 18),
+              'wand': (19, 19), 'thrown': (16, 16)}
+SLOT_INV = {'head': 1, 'neck': 2, 'shoulder': 3, 'back': 16, 'chest': 5, 'wrist': 9, 'hands': 10, 'waist': 6,
+            'legs': 7, 'feet': 8, 'finger': 11, 'trinket': 12}
+QUALITY = {'uncommon': 2, 'rare': 3, 'epic': 4}
+
+
+def forever_row(it):
+    """item_template-like row for a Forever item (only the fields the selection reads)."""
+    slot = (it.get('slot') or '').strip().lower(); typ = (it.get('type') or '').strip().lower()
+    cls_, sub, inv = None, 0, None
+    if slot in SLOT_INV:
+        cls_, inv = 4, SLOT_INV[slot]
+        sub = 0 if slot in ('neck', 'finger', 'trinket') else 1 if slot == 'back' else ARMOR_SUB.get(typ)
+        if sub is None: return None
+    elif slot in ('off hand', 'held in off-hand', 'shield'):
+        if typ == 'shield' or slot == 'shield': cls_, sub, inv = 4, 6, 14
+        elif typ in WEAPON_SUB: cls_, sub, inv = 2, WEAPON_SUB[typ][0], 22
+        else: cls_, sub, inv = 4, 0, 23
+    elif slot in ('one-hand', 'main hand', 'two-hand'):
+        if typ not in WEAPON_SUB: return None
+        two = slot == 'two-hand' or typ in ('staff', 'polearm')
+        cls_, sub = 2, WEAPON_SUB[typ][1 if two else 0]
+        inv = 17 if two else 21 if slot == 'main hand' else 13
+    elif slot == 'ranged':
+        if typ not in WEAPON_SUB: return None
+        cls_, sub = 2, WEAPON_SUB[typ][0]
+        inv = 15 if sub == 2 else 25 if sub == 16 else 26
+    else:
+        return None
+    return cls_, sub, inv
+
+
+OTHER_RES = [
+    (re.compile(r'\+(\d+) healing/\+(\d+) spell damage'), lambda m: {'heal': int(m[1]), 'spell': int(m[2])}),
+    (re.compile(r'\+(\d+) (Shadow|Frost|Fire|Nature|Arcane|Holy) spell damage', re.I), lambda m: {m[2].lower(): int(m[1])}),
+    (re.compile(r'\+(\d+) spell damage'), lambda m: {'spell': int(m[1])}),
+    (re.compile(r'\+(\d+) healing'), lambda m: {'heal': int(m[1])}),
+    (re.compile(r'\+(\d+) (?:AP|attack power)(?! vs)', re.I), lambda m: {'ap': int(m[1])}),
+    (re.compile(r'\+(\d+) ranged attack power', re.I), lambda m: {'rap': int(m[1])}),
+    (re.compile(r'(\d+) mana/5s'), lambda m: {'mp5': int(m[1])}),
+    (re.compile(r'\+([\d.]+)% hit'), lambda m: {'hit': float(m[1])}),
+    (re.compile(r'\+([\d.]+)% (?:spell )?crit'), lambda m: {'crit': float(m[1])}),
+    (re.compile(r'\+(\d+) Defense'), lambda m: {'defense': int(m[1])}),
+    (re.compile(r'\+(\d+) bonus armor'), lambda m: {'armor': int(m[1])}),
+    (re.compile(r'\+(\d+) block value'), lambda m: {'block': int(m[1])}),
+    (re.compile(r'Chance on hit', re.I), lambda m: {'proc': 1}),
+]
+
+
+def parse_other(text):
+    """Effects listed as text by the sites ("+12 spell damage/healing; 4 mana/5s") -> stat keys.  On-use effects
+    and conditional bonuses ("vs Undead", "in Silverpine") are left out."""
+    out = collections.Counter()
+    for part in re.split(r';', text or ''):
+        part = part.strip()
+        if not part or part.lower().startswith(('use', 'when ', 'equip: use')) or ' vs ' in part or ' in ' in part: continue
+        for rx, f in OTHER_RES:
+            m = rx.search(part)
+            if m:
+                out.update(f(m))
+                if rx.pattern.startswith('\\+(\\d+) healing/'): break
+                if 'spell damage' in rx.pattern: break
+    return out
+
+
+def giver_name(text):
+    """'Deathguard Kristof (Tirisfal Glades 65.2, 60.1)' -> 'Deathguard Kristof'."""
+    if not text: return None
+    return re.split(r' \(|;', text)[0].strip()
+
+
+def load_forever(items, sources, stats, item_ok):
+    if not os.path.exists(FOREVER_JSON): return
+    data = json.load(open(FOREVER_JSON))
+    IT = items.it
+    by_name = {}
+    next_id = [0]
+
+    def add(it, default_q, dungeon):
+        name = (it.get('name') or '').strip()
+        if not name: return None
+        if name in by_name: return by_name[name]
+        shape = forever_row(it)
+        if not shape: return None
+        cls_, sub, inv = shape
+        il = it.get('ilvl')
+        q = QUALITY.get((it.get('quality') or '').lower(), default_q)
+        req = it.get('reqLevel') or (max(1, il - 5) if il else dungeon['minLevel'])
+        if not il: il = req + 5
+        iid = it.get('id') or 0
+        if iid in IT:
+            # an old item ID reused by Forever with new stats (e.g. Haunting Blade): the Forever version wins
+            sources.pop(iid, None)
+        elif not iid:
+            next_id[0] -= 1; iid = next_id[0]
+        raw = it.get('stats') or {}
+        st = {k: v for k, v in raw.items() if isinstance(v, (int, float)) and v and k != 'speed'}
+        st.update(parse_other(raw.get('other') if isinstance(raw.get('other'), str) else ''))
+        if not st: st = None
+        IT[iid] = dict(entry=iid, name=name, Quality=str(q), ItemLevel=str(il), RequiredLevel=str(req), **{
+            'class': str(cls_), 'subclass': str(sub), 'InventoryType': str(inv), 'AllowableClass': '-1',
+            'AllowableRace': '-1', 'requiredhonorrank': '0', 'RequiredReputationFaction': '0',
+            'RequiredReputationRank': '0', 'RandomProperty': '0', 'RequiredSkill': '0', 'bonding': '1'})
+        items.extra[iid] = dict(stats=st)
+        FOREVER_ITEMS[iid] = dict(name=name, id=it.get('id'), ilvl=il, quality=q, slot=it.get('slot'),
+                                  type=it.get('type'), est=not st)
+        by_name[name] = iid
+        stats['forever_items'] += 1
+        return iid
+
+    for d in data.get('dungeons', []):
+        if not d.get('minLevel'): continue
+        for it in d.get('loot', []):
+            boss = re.sub(r'\s*\(.*\)$', '', it.get('boss') or 'Trash')
+            iid = add(it, 2 if boss == 'Trash' else 3, d)
+            if iid is None: continue
+            # trash drops are rare: keep them, but behind boss drops of the same score
+            sources[iid].append(dict(kind='drop', inst=d['key'], boss=boss, rate=-1, lvl=d['minLevel'], side=0,
+                                     races=0, classes=0, rank=1 if boss != 'Trash' else 4))
+            stats['forever_drop'] += 1
+        for qu in d.get('quests', []):
+            side = {'alliance': 1, 'horde': 2}.get((qu.get('faction') or '').lower(), 0)
+            rewards = qu.get('rewards') or []
+            ql = qu.get('level') or (d['minLevel'] if not rewards else max((r.get('reqLevel') or 0) for r in rewards) or d['minLevel'])
+            for it in rewards:
+                iid = add(it, 2, d)
+                if iid is None: continue
+                sources[iid].append(dict(kind='fquest', title=qu.get('title') or '?', inst=d['key'], qlevel=ql,
+                                         giver=giver_name(qu.get('giver')), qid=qu.get('questId'), lvl=max(d['minLevel'], ql - 2), side=side, races=0,
+                                         classes=0, choice=('F', qu.get('title'), side) if len(rewards) > 1 else None,
+                                         rank=0))
+                stats['forever_quest'] += 1
 
 # ---------------------------------------------------------------- main build
 def main():
@@ -550,6 +725,7 @@ def main():
                                      side=0, races=0, classes=0, rank=3))
             stats['crafted_src'] += 1
 
+    load_forever(items, sources, stats, item_ok)
     print(dict(stats), "items with sources:", len(sources), "raid-only items:", len(raid_items), "raid npcs:", len(raid_npcs), file=sys.stderr)
 
     # ---------------------------------------------------------------- selection
@@ -603,7 +779,7 @@ def main():
             if inv == 13: return ['mh', 'oh'] if can_dual(cls, L) else ['mh']
         return []
 
-    FACTORS = dict(quest=1.0, drop=1.0, vendor=0.97, crafted=0.9)
+    FACTORS = dict(quest=1.0, fquest=1.0, drop=1.0, vendor=0.97, crafted=0.9)
 
     def best_source(iid, cls, faction, L):
         ok = [s for s in sources[iid] if src_ok(s, cls, faction, L)]
@@ -639,11 +815,14 @@ def main():
                 pick = fix_choices(pick, cand, cls, L, IT, taken_choice)
                 for slot, (sc, iid, src) in pick.items():
                     if src.get('choice'): taken_choice[src['choice']] = iid
-                    per_faction_src[iid][faction] = src
-                    used_src.setdefault(iid, {})
-                    key = (src['kind'], src.get('id') or src.get('inst') or src.get('npc') or src.get('prof'), src.get('boss'), src['side'])
-                    used_src[iid].setdefault(key, src)
-                guide[cls][faction][L] = {slot: iid for slot, (sc, iid, src) in pick.items()}
+                lists = top_lists(pick, cand, IT)
+                for slot, lst in lists.items():
+                    for sc, iid, src in lst:
+                        per_faction_src[iid][faction] = src
+                        used_src.setdefault(iid, {})
+                        key = (src['kind'], src.get('id') or src.get('inst') or src.get('npc') or src.get('prof'), src.get('boss'), src['side'])
+                        used_src[iid].setdefault(key, src)
+                guide[cls][faction][L] = {slot: [iid for sc, iid, src in lst] for slot, lst in lists.items()}
     write_lua(args.out, guide, used_src, IT, inst)
 
 
@@ -687,6 +866,32 @@ def choose(cand, cls, L, IT):
     return pick
 
 
+def top_lists(pick, cand, IT):
+    """Up to TOP items per slot, best first.  The first one(s) are the picks (two for rings and trinkets);
+    the others are the next best candidates for the same role."""
+    out = {}
+    def role_of(slot, iid):
+        inv = int(IT[iid]['InventoryType'])
+        if slot == 'mainhand': return '2h' if inv == 17 else 'mh'
+        if slot == 'offhand': return 'shield' if inv == 14 else 'holdable' if inv == 23 else 'oh'
+        return slot
+    groups = [(s, [s]) for s in ('head', 'neck', 'shoulder', 'back', 'chest', 'wrist', 'hands', 'waist', 'legs', 'feet',
+                                 'ranged', 'mainhand', 'offhand')]
+    groups += [('finger', ['finger1', 'finger2']), ('trinket', ['trinket1', 'trinket2'])]
+    used_mh = pick['mainhand'][1] if 'mainhand' in pick else None
+    for name, slots in groups:
+        firsts = [pick[s] for s in slots if s in pick]
+        if not firsts: continue
+        lst = list(firsts); ids = {x[1] for x in lst}
+        if name == 'offhand' and used_mh: ids.add(used_mh)
+        for x in cand.get(role_of(slots[0], firsts[0][1]), []):
+            if len(lst) >= TOP: break
+            if x[1] in ids: continue
+            lst.append(x); ids.add(x[1])
+        out[name] = lst
+    return out
+
+
 def fix_choices(pick, cand, cls, L, IT, taken):
     """Keep at most one item per quest choice list; the other slot falls back to its next candidate."""
     for _ in range(10):
@@ -720,6 +925,11 @@ def fix_choices(pick, cand, cls, L, IT, taken):
 def lua_str(s): return '"' + s.replace('\\', '\\\\').replace('"', '\\"') + '"'
 
 
+def ikey(iid, IT):
+    """Lua key of an item: its ID, or its name (string) for a Forever item whose ID is unknown."""
+    return str(iid) if iid > 0 else lua_str(IT[iid]['name'])
+
+
 def write_lua(path, guide, used_src, IT, inst):
     L = ["-- ForeverCompanion: leveling best-in-slot gear per class, faction and level bracket (generated by",
          "-- tools/build_gear.py, do not edit by hand).  Source: CMaNGOS classic-db + Data/InstanceDB.lua.",
@@ -728,7 +938,9 @@ def write_lua(path, guide, used_src, IT, inst):
         L.append(f"--   {cls} ({SPEC[cls]}): " + ", ".join(f"{k} {v:g}" for k, v in w.items() if v))
     L += ["-- Bracket L: RequiredLevel <= L and obtainable by L (quest MinLevel <= L, dungeon min level <= L).",
           "-- No world random drops, raid or PvP items.  Two-hand weapon: mainhand only, offhand empty.",
-          "-- ns.GearGuide[CLASS][faction 1 Alliance / 2 Horde][bracket] = { slot = itemID, ... }",
+          "-- ns.GearGuide[CLASS][faction 1 Alliance / 2 Horde][bracket] = { slot = { item1, ..., item5 }, ... }, best first",
+          "-- (finger and trinket: wear the first two).  An item is an itemID, or its name for a new WoW Forever item",
+          "-- whose ID is not known yet (details in ns.GearItems).",
           "local _, ns = ...", "", "ns.GearGuide = {"]
     for cls in guide:
         L.append(f"\t{cls} = {{")
@@ -736,7 +948,7 @@ def write_lua(path, guide, used_src, IT, inst):
             L.append(f"\t\t[{fac}] = {{ -- {'Alliance' if fac == 1 else 'Horde'}")
             for br in BRACKETS:
                 g = guide[cls][fac].get(br, {})
-                body = ", ".join(f"{s} = {g[s]}" for s in SLOTS if s in g)
+                body = ", ".join(f"{s} = {{ " + ", ".join(ikey(i, IT) for i in g[s]) + " }" for s in SLOTS if s in g)
                 L.append(f"\t\t\t[{br}] = {{ {body} }},")
             L.append("\t\t},")
         L.append("\t},")
@@ -748,6 +960,9 @@ def write_lua(path, guide, used_src, IT, inst):
           "ns.GearSources = {"]
     def fmt(s):
         if s['kind'] == 'quest': return f'"quest", {s["id"]}'
+        if s['kind'] == 'fquest':
+            return (f'"fquest", {lua_str(s["title"])}, {lua_str(s["inst"])}, {s["qlevel"]}, '
+                    f'{lua_str(s["giver"]) if s.get("giver") else "nil"}, {s.get("qid") or "nil"}')
         if s['kind'] == 'drop': return f'"drop", {lua_str(s["inst"])}, {lua_str(s["boss"])}, {s["rate"]:g}'
         if s['kind'] == 'vendor':
             m, x, y = s['pos']; return f'"vendor", {lua_str(s["npc"])}, {m}, {round(x)}, {round(y)}'
@@ -756,12 +971,22 @@ def write_lua(path, guide, used_src, IT, inst):
         srcs = list(used_src[iid].values())
         srcs.sort(key=lambda s: (s['rank'], s['side'] == 2, s['lvl']))
         main = srcs[0]
-        line = f"\t[{iid}] = {{ {fmt(main)}"
+        line = f"\t[{ikey(iid, IT)}] = {{ {fmt(main)}"
         if main['side'] == 1:
             h = [s for s in srcs if s['side'] in (0, 2)]
             if h: line += f", h = {{ {fmt(h[0])} }}"
+        if iid in FOREVER_ITEMS: line += ", new = true"
         line += f" }}, -- {IT[iid]['name']}"
         L.append(line)
+    L.append("}")
+    # new WoW Forever items: what the sites list about them (the tooltip has the rest once the item is known)
+    L += ["", "-- New WoW Forever items: name, item level, quality (2 green, 3 blue, 4 purple), slot, type and whether",
+          "-- their stats are known (est = true: ranked from the item level and type only, stats not published yet).",
+          "ns.GearItems = {"]
+    for iid in sorted(i for i in used_src if i in FOREVER_ITEMS):
+        f = FOREVER_ITEMS[iid]
+        L.append(f"\t[{ikey(iid, IT)}] = {{ name = {lua_str(f['name'])}, id = {f['id'] or 'nil'}, ilvl = {f['ilvl'] or 'nil'}, quality = {f['quality']}, "
+                 f"slot = {lua_str(f['slot'])}, type = {lua_str(f['type'] or '')}{', est = true' if f['est'] else ''} }},")
     L.append("}")
     open(path, 'w').write("\n".join(L) + "\n")
     print('wrote', path, os.path.getsize(path), 'bytes', file=sys.stderr)

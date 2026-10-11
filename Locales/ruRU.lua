@@ -655,3 +655,11 @@ L["Drop totems only for long or group fights; they cost a lot of mana."] = "Ст
 L["Use the slowest, strongest two-handed weapon you can find."] = "Используй самое медленное и сильное двуручное оружие, какое найдёшь."
 L["Finish enemies with your wand to save mana."] = "Добивай врагов жезлом, чтобы экономить ману."
 L["Keep a weapon imbue on your weapon: Rockbiter early, Windfury from level 30."] = "Держи на оружии зачарование шамана: сначала Оружие камнедробителя, с 30-го уровня Оружие неистовства ветра."
+
+-- v2.3 gear
+L["Trash mobs"] = "Обычные противники"
+L["New"] = "Новое"
+L["New in WoW Forever."] = "Новинка WoW Forever."
+L["Its stats are not published yet: ranked from its item level and type."] = "Характеристики ещё не опубликованы: место определено по уровню и типу предмета."
+L["New in WoW Forever: details appear once the item has been seen in game."] = "Новинка WoW Forever: подробности появятся, когда предмет встретится в игре."
+L["The 5 best items for each slot that you can get by this level, best first, with where to get them: quests, dungeon drops (new WoW Forever dungeons included), vendors and crafting. Rings and trinkets: wear the first two. Click an item with a quest or a vendor to point the arrow there. Shift-click: link in chat, Ctrl-click: try on."] = "5 лучших предметов для каждой ячейки, доступных к этому уровню, от лучшего к худшему, и где их получить: задания, добыча в подземельях (включая новые подземелья WoW Forever), торговцы и профессии. Кольца и аксессуары: надевайте первые два. Щелчок по предмету с заданием или торговцем направляет туда стрелку. Shift-щелчок: ссылка в чат, Ctrl-щелчок: примерить."

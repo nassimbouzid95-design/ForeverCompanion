@@ -1,0 +1,3746 @@
+{
+ "generated": "2026-10-11",
+ "note": "Item stats/ilvl/reqLevel/quality from Wowhead Forever tooltips (nether.wowhead.com/forever) where id present; values are beta and may change. stats.other holds non-primary effects; stats.damage is weapon damage range.",
+ "dungeons": [
+  {
+   "key": "HallOfThanes",
+   "name": "Hall of Thanes",
+   "minLevel": 13,
+   "maxLevel": 18,
+   "zone": "Ironforge (Old Ironforge, beneath the High Seat)",
+   "entrance": {
+    "zone": "Ironforge",
+    "x": 43.5,
+    "y": 52.0,
+    "note": "Cobwebbed passage left inside the High Seat (wowforeverguides 43.5,52.0; zockify gives 44.5,49.4). Horde must travel through Alliance territory."
+   },
+   "bosses": [
+    "Faldrim Anvilmar",
+    "Magmatus",
+    "Plunder",
+    "Durgen Dirgehammer"
+   ],
+   "loot": [
+    {
+     "name": "Ephemeral Choker",
+     "id": 270227,
+     "ilvl": 18,
+     "reqLevel": 13,
+     "slot": "Neck",
+     "type": "Miscellaneous",
+     "quality": "rare",
+     "boss": "Faldrim Anvilmar",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": 5,
+      "armor": null,
+      "dps": null,
+      "speed": null
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Aetherwisp Bracers",
+     "id": 271096,
+     "ilvl": 18,
+     "reqLevel": 13,
+     "slot": "Wrist",
+     "type": "Cloth",
+     "quality": "rare",
+     "boss": "Faldrim Anvilmar",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": null,
+      "armor": 15,
+      "dps": null,
+      "speed": null,
+      "other": "+30 bonus armor; +3 spell damage/healing"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Spiritwraith Drape",
+     "id": 271097,
+     "ilvl": 18,
+     "reqLevel": 13,
+     "slot": "Back",
+     "type": "Cloth",
+     "quality": "rare",
+     "boss": "Faldrim Anvilmar",
+     "stats": {
+      "str": null,
+      "agi": 3,
+      "sta": null,
+      "int": null,
+      "spi": 4,
+      "armor": 17,
+      "dps": null,
+      "speed": null
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Kindlegem Girdle",
+     "id": 270230,
+     "ilvl": 18,
+     "reqLevel": 13,
+     "slot": "Waist",
+     "type": "Mail",
+     "quality": "rare",
+     "boss": "Magmatus",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": 7,
+      "int": null,
+      "spi": null,
+      "armor": 100,
+      "dps": null,
+      "speed": null
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Flamefist Grips",
+     "id": 270231,
+     "ilvl": 18,
+     "reqLevel": 13,
+     "slot": "Hands",
+     "type": "Leather",
+     "quality": "rare",
+     "boss": "Magmatus",
+     "stats": {
+      "str": null,
+      "agi": 5,
+      "sta": null,
+      "int": null,
+      "spi": 5,
+      "armor": 51,
+      "dps": null,
+      "speed": null
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Fang of Magmatus",
+     "id": 271095,
+     "ilvl": 18,
+     "reqLevel": 13,
+     "slot": "Main Hand",
+     "type": "Dagger",
+     "quality": "rare",
+     "boss": "Magmatus",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": 4,
+      "spi": null,
+      "armor": null,
+      "dps": 7.94,
+      "speed": 1.7,
+      "damage": "9-18",
+      "other": "+18 spell damage/healing"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Golemheart Stave",
+     "id": 270228,
+     "ilvl": 18,
+     "reqLevel": 13,
+     "slot": "Two-Hand",
+     "type": "Staff",
+     "quality": "rare",
+     "boss": "Plunder",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": null,
+      "armor": null,
+      "dps": 11.88,
+      "speed": 3.2,
+      "damage": "30-46",
+      "other": "+9 Fire Resistance; +18 spell damage/healing"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Golemguard Chest",
+     "id": 271098,
+     "ilvl": 18,
+     "reqLevel": 13,
+     "slot": "Chest",
+     "type": "Mail",
+     "quality": "rare",
+     "boss": "Plunder",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": 6,
+      "int": null,
+      "spi": null,
+      "armor": 178,
+      "dps": null,
+      "speed": null,
+      "other": "+60 bonus armor"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Treads of the Protector Golem",
+     "id": 270229,
+     "ilvl": 18,
+     "reqLevel": 13,
+     "slot": "Feet",
+     "type": "Mail",
+     "quality": "rare",
+     "boss": "Plunder",
+     "stats": {
+      "str": 5,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": null,
+      "armor": 122,
+      "dps": null,
+      "speed": null,
+      "other": "+50 bonus armor"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Durgen's Crescent Axe",
+     "id": 270256,
+     "ilvl": 18,
+     "reqLevel": 13,
+     "slot": "Main Hand",
+     "type": "Axe",
+     "quality": "rare",
+     "boss": "Durgen Dirgehammer",
+     "stats": {
+      "str": 4,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": null,
+      "armor": null,
+      "dps": 12.29,
+      "speed": 2.4,
+      "damage": "20-39"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Direhammer Leggings",
+     "id": 270260,
+     "ilvl": 18,
+     "reqLevel": 13,
+     "slot": "Legs",
+     "type": "Leather",
+     "quality": "rare",
+     "boss": "Durgen Dirgehammer",
+     "stats": {
+      "str": null,
+      "agi": 4,
+      "sta": 7,
+      "int": null,
+      "spi": null,
+      "armor": 72,
+      "dps": null,
+      "speed": null
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Robes of the Disgraced Thane",
+     "id": 270261,
+     "ilvl": 18,
+     "reqLevel": 13,
+     "slot": "Chest",
+     "type": "Cloth",
+     "quality": "rare",
+     "boss": "Durgen Dirgehammer",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": 4,
+      "armor": 35,
+      "dps": null,
+      "speed": null,
+      "other": "+8 spell damage/healing"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    }
+   ],
+   "quests": [
+    {
+     "title": "Old Ironforge Incursion",
+     "questId": 96393,
+     "faction": "Alliance",
+     "level": 16,
+     "minLevel": 9,
+     "giver": "Earthseer Farsen (Dun Morogh 64.8, 58.4)",
+     "rewards": [
+      {
+       "name": "Calibrated Blunderbuss",
+       "id": 279894,
+       "slot": "Ranged",
+       "type": "Gun",
+       "ilvl": 18,
+       "quality": "rare",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": 3,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": 9.57,
+        "speed": 2.3,
+        "damage": "15-29"
+       }
+      },
+      {
+       "name": "Ironforge Greathammer",
+       "id": 279895,
+       "slot": "Two-Hand",
+       "type": "Mace",
+       "ilvl": 18,
+       "quality": "rare",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": null,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": 15.97,
+        "speed": 3.1,
+        "damage": "39-60",
+        "other": "Chance on hit: 42 Fire damage"
+       }
+      },
+      {
+       "name": "Deepblaze",
+       "id": 279896,
+       "slot": "Ranged",
+       "type": "Wand",
+       "ilvl": 18,
+       "quality": "rare",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": null,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": 18.53,
+        "speed": 1.7,
+        "damage": "22-41 Fire",
+        "other": "+3 Fire Resistance"
+       }
+      }
+     ]
+    },
+    {
+     "title": "The Restless Dead",
+     "questId": 96394,
+     "faction": "Both",
+     "level": 15,
+     "minLevel": 10,
+     "giver": "Afadra Dunwall (Ironforge 32.8, 48.0)",
+     "rewards": [
+      {
+       "name": "Dusty Belt",
+       "id": 279897,
+       "slot": "Waist",
+       "type": "Leather",
+       "ilvl": 17,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": 2,
+        "sta": null,
+        "int": null,
+        "spi": 2,
+        "armor": 41,
+        "dps": null,
+        "speed": null
+       }
+      },
+      {
+       "name": "Cryptwalker Bracers",
+       "id": 280095,
+       "slot": "Wrist",
+       "type": "Mail",
+       "ilvl": 17,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": 2,
+        "agi": null,
+        "sta": null,
+        "int": null,
+        "spi": 2,
+        "armor": 69,
+        "dps": null,
+        "speed": null
+       }
+      }
+     ]
+    },
+    {
+     "title": "Important Heirlooms",
+     "questId": 96403,
+     "faction": "Both",
+     "level": 15,
+     "minLevel": 10,
+     "giver": "Thom Filch (Ironforge ~32.6, 44.6)",
+     "rewards": [
+      {
+       "name": "Dwarven Tome",
+       "id": 279898,
+       "slot": "Off Hand",
+       "type": "Miscellaneous",
+       "ilvl": 17,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": null,
+        "int": null,
+        "spi": 1,
+        "armor": null,
+        "dps": null,
+        "speed": null,
+        "other": "+3 spell damage/healing"
+       }
+      },
+      {
+       "name": "Tomb Robber's Gloves",
+       "id": 280096,
+       "slot": "Hands",
+       "type": "Cloth",
+       "ilvl": 17,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": 1,
+        "int": 2,
+        "spi": null,
+        "armor": 19,
+        "dps": null,
+        "speed": null
+       }
+      }
+     ]
+    },
+    {
+     "title": "An Ancient Grudge",
+     "questId": 96395,
+     "faction": "Both",
+     "level": 15,
+     "minLevel": 10,
+     "giver": "Ghostly Attendant (inside dungeon, west wing)",
+     "rewards": [
+      {
+       "name": "Catacomb Cloak",
+       "id": 279899,
+       "slot": "Back",
+       "type": "Cloth",
+       "ilvl": 17,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": 2,
+        "int": null,
+        "spi": null,
+        "armor": 15,
+        "dps": null,
+        "speed": null,
+        "other": "+3 AP; +4 AP vs Humanoids"
+       }
+      },
+      {
+       "name": "Deepgrave Trousers",
+       "id": 279900,
+       "slot": "Legs",
+       "type": "Leather",
+       "ilvl": 17,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": 3,
+        "sta": null,
+        "int": null,
+        "spi": 3,
+        "armor": 64,
+        "dps": null,
+        "speed": null
+       }
+      }
+     ]
+    },
+    {
+     "title": "The Treaty of Understanding",
+     "questId": 98423,
+     "faction": "Alliance",
+     "level": 16,
+     "minLevel": null,
+     "giver": "Found in dungeon final area; turn in to King Magni Bronzebeard (Ironforge 40.0, 55.2)",
+     "rewards": []
+    }
+   ],
+   "sourceUrls": [
+    "https://www.zockify.com/forever/dungeons/the-hall-of-thanes/",
+    "https://wowtbc.gg/warcraftforever/loot-tables/dungeons/hall-of-thanes/",
+    "https://www.method.gg/wow-forever/dungeons/hall-of-thanes",
+    "https://wowforever.wclbox.com/en/fuben/hall-of-thanes",
+    "https://wowforeverguides.com/dungeons/hall-of-thanes",
+    "https://nether.wowhead.com/forever/tooltip/item/<id>"
+   ]
+  },
+  {
+   "key": "RuinsOfLordaeron",
+   "name": "Ruins of Lordaeron",
+   "minLevel": 15,
+   "maxLevel": 20,
+   "zone": "Tirisfal Glades",
+   "entrance": {
+    "zone": "Tirisfal Glades",
+    "x": 71.6,
+    "y": 11.4,
+    "note": "Ruins above the Undercity, east side of the keep courtyard (mobalytics/wowhead comment 71.6,11.4; wowforeverguides cites 64.3,67.2 from KamiLabs). Method/warcrafttavern list 15/16-22."
+   },
+   "bosses": [
+    "Witherfang",
+    "The Baron",
+    "Viktor the Vile",
+    "The Abandoned",
+    "Bjork",
+    "Rath'mael",
+    "Lordaeron Captain (rare)"
+   ],
+   "loot": [
+    {
+     "name": "Atrophic Girdle",
+     "id": 271201,
+     "ilvl": 20,
+     "reqLevel": 15,
+     "slot": "Waist",
+     "type": "Mail",
+     "quality": "rare",
+     "boss": "Witherfang",
+     "stats": {
+      "str": 3,
+      "agi": null,
+      "sta": 7,
+      "int": null,
+      "spi": null,
+      "armor": 104,
+      "dps": null,
+      "speed": null
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "icy-veins",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Witherbite Bracers",
+     "id": 271202,
+     "ilvl": 20,
+     "reqLevel": 15,
+     "slot": "Wrist",
+     "type": "Leather",
+     "quality": "rare",
+     "boss": "Witherfang",
+     "stats": {
+      "str": null,
+      "agi": 4,
+      "sta": null,
+      "int": null,
+      "spi": null,
+      "armor": 37,
+      "dps": null,
+      "speed": null,
+      "other": "+5 spell damage/healing"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "icy-veins",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Segmented Spider Leg",
+     "id": 271203,
+     "ilvl": 20,
+     "reqLevel": 15,
+     "slot": "Two-Hand",
+     "type": "Staff",
+     "quality": "rare",
+     "boss": "Witherfang",
+     "stats": {
+      "str": null,
+      "agi": 9,
+      "sta": null,
+      "int": null,
+      "spi": 5,
+      "armor": null,
+      "dps": 17.5,
+      "speed": 3.6,
+      "damage": "50-76"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "icy-veins",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Meathook Slicer",
+     "id": 271204,
+     "ilvl": 20,
+     "reqLevel": 15,
+     "slot": "One-Hand",
+     "type": "Dagger",
+     "quality": "rare",
+     "boss": "The Baron",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": 5,
+      "int": null,
+      "spi": null,
+      "armor": null,
+      "dps": 13.61,
+      "speed": 1.8,
+      "damage": "17-32"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "icy-veins",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Abomination Bones",
+     "id": 271205,
+     "ilvl": 20,
+     "reqLevel": 15,
+     "slot": "Chest",
+     "type": "Mail",
+     "quality": "rare",
+     "boss": "The Baron",
+     "stats": {
+      "str": 8,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": null,
+      "armor": 184,
+      "dps": null,
+      "speed": null,
+      "other": "+5 Shadow Resistance"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "icy-veins",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Leftover Abomination Skin",
+     "id": 271206,
+     "ilvl": 20,
+     "reqLevel": 15,
+     "slot": "Chest",
+     "type": "Cloth",
+     "quality": "rare",
+     "boss": "The Baron",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": 9,
+      "armor": 37,
+      "dps": null,
+      "speed": null,
+      "other": "+7 Shadow spell damage"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "icy-veins",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Rotmender's Leggings",
+     "id": 271207,
+     "ilvl": 22,
+     "reqLevel": 17,
+     "slot": "Legs",
+     "type": "Cloth",
+     "quality": "rare",
+     "boss": "The Abandoned",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": 5,
+      "int": null,
+      "spi": null,
+      "armor": 35,
+      "dps": null,
+      "speed": null,
+      "other": "4 mana/5s; Rotmender's Raiment set"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "icy-veins",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Grip of Fear",
+     "id": 271208,
+     "ilvl": 22,
+     "reqLevel": 17,
+     "slot": "Hands",
+     "type": "Mail",
+     "quality": "rare",
+     "boss": "The Abandoned",
+     "stats": {
+      "str": 6,
+      "agi": null,
+      "sta": null,
+      "int": 6,
+      "spi": null,
+      "armor": 119,
+      "dps": null,
+      "speed": null
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "icy-veins",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Scepter of the Abandoned",
+     "id": 271216,
+     "ilvl": 22,
+     "reqLevel": 17,
+     "slot": "Main Hand",
+     "type": "Mace",
+     "quality": "rare",
+     "boss": "The Abandoned",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": null,
+      "armor": null,
+      "dps": 9.62,
+      "speed": 2.6,
+      "damage": "17-33",
+      "other": "+5 Shadow Resistance; +24 spell damage/healing"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "icy-veins",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Bonerust Leggings",
+     "id": 271209,
+     "ilvl": 21,
+     "reqLevel": 16,
+     "slot": "Legs",
+     "type": "Mail",
+     "quality": "rare",
+     "boss": "Bjork",
+     "stats": {
+      "str": 4,
+      "agi": 9,
+      "sta": null,
+      "int": null,
+      "spi": null,
+      "armor": 164,
+      "dps": null,
+      "speed": null
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "icy-veins",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Tuskwrap Belt",
+     "id": 271210,
+     "ilvl": 21,
+     "reqLevel": 16,
+     "slot": "Waist",
+     "type": "Cloth",
+     "quality": "rare",
+     "boss": "Bjork",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": 5,
+      "armor": 22,
+      "dps": null,
+      "speed": null,
+      "other": "+6 spell damage/healing"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "icy-veins",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Corpse Chopper",
+     "id": 271217,
+     "ilvl": 21,
+     "reqLevel": 16,
+     "slot": "Two-Hand",
+     "type": "Axe",
+     "quality": "rare",
+     "boss": "Bjork",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": null,
+      "armor": null,
+      "dps": 18.19,
+      "speed": 3.6,
+      "damage": "52-79",
+      "other": "Use on corpse: restores 150 health, 150 mana, 15 rage"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "icy-veins",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Vilewalkers",
+     "id": 271211,
+     "ilvl": 22,
+     "reqLevel": 17,
+     "slot": "Feet",
+     "type": "Mail",
+     "quality": "rare",
+     "boss": "Viktor the Vile",
+     "stats": {
+      "str": 7,
+      "agi": null,
+      "sta": 5,
+      "int": null,
+      "spi": null,
+      "armor": 131,
+      "dps": null,
+      "speed": null
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "icy-veins",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Bloodied Chestwraps",
+     "id": 271212,
+     "ilvl": 22,
+     "reqLevel": 17,
+     "slot": "Chest",
+     "type": "Leather",
+     "quality": "rare",
+     "boss": "Viktor the Vile",
+     "stats": {
+      "str": null,
+      "agi": 7,
+      "sta": null,
+      "int": null,
+      "spi": 9,
+      "armor": 89,
+      "dps": null,
+      "speed": null
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "icy-veins",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Vileblood Scimitar",
+     "id": 271218,
+     "ilvl": 22,
+     "reqLevel": 17,
+     "slot": "One-Hand",
+     "type": "Sword",
+     "quality": "rare",
+     "boss": "Viktor the Vile",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": 5,
+      "armor": null,
+      "dps": 14.62,
+      "speed": 2.6,
+      "damage": "26-50"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "icy-veins",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Mirror of Rath'mael",
+     "id": 271213,
+     "ilvl": 24,
+     "reqLevel": 19,
+     "slot": "Off Hand",
+     "type": "Shield",
+     "quality": "rare",
+     "boss": "Rath'mael",
+     "stats": {
+      "str": 5,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": null,
+      "armor": 547,
+      "dps": null,
+      "speed": null,
+      "other": "11 block; +1% block chance"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "icy-veins",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Rotmender's Treads",
+     "id": 271214,
+     "ilvl": 24,
+     "reqLevel": 19,
+     "slot": "Feet",
+     "type": "Cloth",
+     "quality": "rare",
+     "boss": "Rath'mael",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": 7,
+      "int": null,
+      "spi": null,
+      "armor": 29,
+      "dps": null,
+      "speed": null,
+      "other": "+15 healing/+5 spell damage; Rotmender's Raiment set"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "icy-veins",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Coldspire Staff",
+     "id": 271215,
+     "ilvl": 24,
+     "reqLevel": 19,
+     "slot": "Two-Hand",
+     "type": "Staff",
+     "quality": "rare",
+     "boss": "Rath'mael",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": null,
+      "armor": null,
+      "dps": 15.14,
+      "speed": 3.6,
+      "damage": "43-66",
+      "other": "+13 Frost Resistance; +32 Frost spell damage"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "method",
+      "icy-veins",
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Haunting Blade",
+     "id": 6641,
+     "ilvl": 27,
+     "reqLevel": 22,
+     "slot": "Two-Hand",
+     "type": "Sword",
+     "quality": "rare",
+     "boss": "Lordaeron Captain",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": null,
+      "armor": null,
+      "dps": 22.37,
+      "speed": 3.8,
+      "damage": "68-102",
+      "other": "+33 healing/+11 spell damage"
+     },
+     "sources": [
+      "zockify",
+      "icy-veins",
+      "wowhead",
+      "wowforeverguides"
+     ]
+    },
+    {
+     "name": "Phantom Armor",
+     "id": 6642,
+     "ilvl": 27,
+     "reqLevel": 22,
+     "slot": "Chest",
+     "type": "Mail",
+     "quality": "rare",
+     "boss": "Lordaeron Captain",
+     "stats": {
+      "str": 3,
+      "agi": null,
+      "sta": 12,
+      "int": null,
+      "spi": 5,
+      "armor": 208,
+      "dps": null,
+      "speed": null
+     },
+     "sources": [
+      "zockify",
+      "icy-veins",
+      "wowhead",
+      "wowforeverguides"
+     ]
+    },
+    {
+     "name": "Rotmender's Garb",
+     "id": null,
+     "ilvl": 23,
+     "reqLevel": null,
+     "slot": "Chest",
+     "type": "Cloth",
+     "quality": null,
+     "boss": "Trash",
+     "stats": null,
+     "sources": [
+      "zockify"
+     ]
+    },
+    {
+     "name": "Sword of the Fallen",
+     "id": null,
+     "ilvl": 23,
+     "reqLevel": null,
+     "slot": "Two-Hand",
+     "type": "Sword",
+     "quality": null,
+     "boss": "Trash",
+     "stats": null,
+     "sources": [
+      "zockify"
+     ]
+    },
+    {
+     "name": "Rotmender's Gloves",
+     "id": null,
+     "ilvl": 22,
+     "reqLevel": null,
+     "slot": "Hands",
+     "type": "Cloth",
+     "quality": null,
+     "boss": "Trash",
+     "stats": null,
+     "sources": [
+      "zockify"
+     ]
+    },
+    {
+     "name": "Rotmender's Sash",
+     "id": null,
+     "ilvl": 22,
+     "reqLevel": null,
+     "slot": "Waist",
+     "type": "Cloth",
+     "quality": null,
+     "boss": "Trash",
+     "stats": null,
+     "sources": [
+      "zockify"
+     ]
+    },
+    {
+     "name": "Death Bindings",
+     "id": null,
+     "ilvl": 21,
+     "reqLevel": null,
+     "slot": "Wrist",
+     "type": "Mail",
+     "quality": null,
+     "boss": "Trash",
+     "stats": null,
+     "sources": [
+      "zockify"
+     ]
+    }
+   ],
+   "quests": [
+    {
+     "title": "The Wrath of Rath'mael",
+     "questId": 92422,
+     "faction": "Horde",
+     "level": 15,
+     "giver": "Deathguard Kristof (Tirisfal Glades 65.2, 60.1)",
+     "rewards": [
+      {
+       "name": "Forsaken Greataxe",
+       "id": 251533,
+       "slot": "Two-Hand",
+       "type": "Axe",
+       "ilvl": 24,
+       "quality": "rare",
+       "reqLevel": null,
+       "stats": {
+        "str": 8,
+        "agi": null,
+        "sta": 4,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": 20.5,
+        "speed": 3.0,
+        "damage": "49-74",
+        "other": "+2% movement speed in Silverpine/Hillsbrad"
+       }
+      },
+      {
+       "name": "Gnarled Necromancer's Staff",
+       "id": 251534,
+       "slot": "Two-Hand",
+       "type": "Staff",
+       "ilvl": 24,
+       "quality": "rare",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": null,
+        "int": null,
+        "spi": 10,
+        "armor": null,
+        "dps": 15.18,
+        "speed": 2.8,
+        "damage": "34-51",
+        "other": "+26 spell damage/healing; +2% movement speed in Silverpine/Hillsbrad"
+       }
+      }
+     ]
+    },
+    {
+     "title": "Light's Justice",
+     "questId": 92421,
+     "faction": "Horde",
+     "level": 15,
+     "giver": "Morbin Lightbane (Undercity 58.3, 89.7)",
+     "rewards": [
+      {
+       "name": "The Stitcher",
+       "id": 279874,
+       "slot": "Main Hand",
+       "type": "Mace",
+       "ilvl": 24,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": 3,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": 8.13,
+        "speed": 2.4,
+        "damage": "13-26",
+        "other": "+30 healing/+10 spell damage"
+       }
+      },
+      {
+       "name": "Spare Part Bindings",
+       "id": 279875,
+       "slot": "Wrist",
+       "type": "Leather",
+       "ilvl": 24,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": 3,
+        "sta": 3,
+        "int": null,
+        "spi": null,
+        "armor": 37,
+        "dps": null,
+        "speed": null
+       }
+      }
+     ]
+    },
+    {
+     "title": "A Frightened Request",
+     "questId": 92401,
+     "faction": "Horde",
+     "level": 15,
+     "giver": "Tabitha Heartweaver (The Sepulcher, Silverpine 44.5, 43.0)",
+     "rewards": [
+      {
+       "name": "Edward's Knife",
+       "id": 251485,
+       "slot": "One-Hand",
+       "type": "Dagger",
+       "ilvl": 24,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": 2,
+        "sta": 2,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": 12.19,
+        "speed": 1.6,
+        "damage": "13-26"
+       }
+      },
+      {
+       "name": "Tabitha's Cuffs",
+       "id": 251486,
+       "slot": "Wrist",
+       "type": "Cloth",
+       "ilvl": 24,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": 4,
+        "int": null,
+        "spi": null,
+        "armor": 17,
+        "dps": null,
+        "speed": null,
+        "other": "+3 spell damage/healing"
+       }
+      }
+     ]
+    },
+    {
+     "title": "The New Plague",
+     "questId": 95216,
+     "faction": "Horde",
+     "level": 16,
+     "giver": "Theodore Griffs (Undercity 46.5, 71.6)",
+     "rewards": [
+      {
+       "name": "Plaguefang",
+       "id": 279876,
+       "slot": "One-Hand",
+       "type": "Sword",
+       "ilvl": 24,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": null,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": 12.38,
+        "speed": 2.1,
+        "damage": "18-34",
+        "other": "Chance on hit: poison 2 Nature dmg/sec for 10 sec"
+       }
+      },
+      {
+       "name": "Blight Gloves",
+       "id": 279877,
+       "slot": "Hands",
+       "type": "Cloth",
+       "ilvl": 24,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": null,
+        "int": null,
+        "spi": null,
+        "armor": 24,
+        "dps": null,
+        "speed": null,
+        "other": "+4 Nature Resistance; +5 spell damage/healing"
+       }
+      }
+     ]
+    },
+    {
+     "title": "Unending Torment",
+     "questId": 97288,
+     "faction": "Horde",
+     "level": 16,
+     "giver": "Abominable Head (drops from The Baron); ends with Master Apothecary Faranell (Undercity)",
+     "rewards": [
+      {
+       "name": "Monstrous Cleaver",
+       "id": 279864,
+       "slot": "Two-Hand",
+       "type": "Sword",
+       "ilvl": 23,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": 6,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": 15.15,
+        "speed": 3.3,
+        "damage": "40-60",
+        "other": "+4 AP; +6 AP vs Undead"
+       }
+      },
+      {
+       "name": "Grave Shroud",
+       "id": 279865,
+       "slot": "Back",
+       "type": "Cloth",
+       "ilvl": 23,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": 3,
+        "agi": null,
+        "sta": 3,
+        "int": null,
+        "spi": null,
+        "armor": 18,
+        "dps": null,
+        "speed": null
+       }
+      },
+      {
+       "name": "Slain Baron's Signet",
+       "id": 279867,
+       "slot": "Finger",
+       "type": "Miscellaneous",
+       "ilvl": 23,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": 3,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": null,
+        "speed": null,
+        "other": "+1 Defense"
+       }
+      }
+     ]
+    },
+    {
+     "title": "Crest of Lordaeron",
+     "questId": 95204,
+     "faction": "Horde",
+     "level": 16,
+     "giver": "Crest of Lordaeron item (ruins); turn in Oran Snakewrithe (Undercity 73.6, 32.6)",
+     "rewards": []
+    },
+    {
+     "title": "Abominable Creatures",
+     "questId": 95250,
+     "faction": "Alliance",
+     "level": 16,
+     "giver": "Captain Truman (inside the instance)",
+     "rewards": [
+      {
+       "name": "Monstrous Cleaver",
+       "id": 279864,
+       "slot": "Two-Hand",
+       "type": "Sword",
+       "ilvl": 23,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": 6,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": 15.15,
+        "speed": 3.3,
+        "damage": "40-60",
+        "other": "+4 AP; +6 AP vs Undead"
+       }
+      },
+      {
+       "name": "Grave Shroud",
+       "id": 279865,
+       "slot": "Back",
+       "type": "Cloth",
+       "ilvl": 23,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": 3,
+        "agi": null,
+        "sta": 3,
+        "int": null,
+        "spi": null,
+        "armor": 18,
+        "dps": null,
+        "speed": null
+       }
+      },
+      {
+       "name": "Slain Baron's Signet",
+       "id": 279867,
+       "slot": "Finger",
+       "type": "Miscellaneous",
+       "ilvl": 23,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": 3,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": null,
+        "speed": null,
+        "other": "+1 Defense"
+       }
+      }
+     ]
+    },
+    {
+     "title": "Bloodied Insignia",
+     "questId": 95195,
+     "faction": "Alliance",
+     "level": 16,
+     "giver": "Bloodied Insignia (skeleton drop); General Marcus Jonathan (Stormwind 64.6, 75.8)",
+     "rewards": [
+      {
+       "name": "Duty Bound Leggings",
+       "id": 279868,
+       "slot": "Legs",
+       "type": "Leather",
+       "ilvl": 24,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": 6,
+        "sta": null,
+        "int": 4,
+        "spi": null,
+        "armor": 73,
+        "dps": null,
+        "speed": null
+       }
+      },
+      {
+       "name": "Remembrance Armor",
+       "id": 279869,
+       "slot": "Chest",
+       "type": "Mail",
+       "ilvl": 24,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": 3,
+        "agi": null,
+        "sta": 5,
+        "int": 3,
+        "spi": null,
+        "armor": 180,
+        "dps": null,
+        "speed": null
+       }
+      }
+     ]
+    },
+    {
+     "title": "Remember That I Love You",
+     "questId": 92415,
+     "faction": "Alliance",
+     "level": 15,
+     "giver": "Item near Rath'mael; Orphan Matron Nightingale (Stormwind 47.0, 38.0)",
+     "rewards": [
+      {
+       "name": "Tarnished Locket",
+       "id": 279870,
+       "slot": "Neck",
+       "type": "Miscellaneous",
+       "ilvl": 24,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": -3,
+        "agi": null,
+        "sta": 6,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": null,
+        "speed": null
+       }
+      }
+     ]
+    },
+    {
+     "title": "Crest of Lordaeron",
+     "questId": 95189,
+     "faction": "Alliance",
+     "level": 16,
+     "giver": "Crest of Lordaeron item (ruins); Lady Dena Kennedy (Stormwind Keep)",
+     "rewards": []
+    }
+   ],
+   "sourceUrls": [
+    "https://www.zockify.com/forever/dungeons/ruins-of-lordaeron/",
+    "https://wowtbc.gg/warcraftforever/loot-tables/dungeons/ruins-of-lordaeron/",
+    "https://www.method.gg/wow-forever/dungeons/ruins-of-lordaeron",
+    "https://wowforever.wclbox.com/en/fuben/ruins-of-lordaeron",
+    "https://www.wowhead.com/forever/zone=16611/ruins-of-lordaeron",
+    "https://wowforeverguides.com/dungeons/ruins-of-lordaeron",
+    "https://www.icy-veins.com/wow-forever/ruins-of-lordaeron-guide",
+    "https://mobalytics.gg/wow-forever/dungeons/ruins-of-lordaeron-dungeon-guide"
+   ]
+  },
+  {
+   "key": "ExcavationSite",
+   "name": "Excavation Site: Wetlands",
+   "minLevel": 26,
+   "maxLevel": 31,
+   "zone": "Wetlands",
+   "entrance": {
+    "zone": "Wetlands",
+    "x": 53.4,
+    "y": 65.3,
+    "note": "Top of Whelgar's Excavation Site, near Thelgen Rock (meeting stone 53.4,65.3 per wowforeverguides; zockify ~53.2,65.8). Quests require level 24."
+   },
+   "bosses": [
+    "Saltspine",
+    "Shadetooth",
+    "Highland Horror",
+    "Relic Guardian"
+   ],
+   "loot": [
+    {
+     "name": "Supple Bellyskin Leggings",
+     "id": 273022,
+     "ilvl": 31,
+     "reqLevel": 26,
+     "slot": "Legs",
+     "type": "Leather",
+     "quality": "rare",
+     "boss": "Saltspine",
+     "stats": {
+      "str": 6,
+      "agi": null,
+      "sta": 14,
+      "int": null,
+      "spi": null,
+      "armor": 92,
+      "dps": null,
+      "speed": null
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead",
+      "wowforeverguides"
+     ]
+    },
+    {
+     "name": "Saltscale Girdle",
+     "id": 273023,
+     "ilvl": 31,
+     "reqLevel": 26,
+     "slot": "Waist",
+     "type": "Mail",
+     "quality": "rare",
+     "boss": "Saltspine",
+     "stats": {
+      "str": 9,
+      "agi": null,
+      "sta": null,
+      "int": 9,
+      "spi": null,
+      "armor": 124,
+      "dps": null,
+      "speed": null
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead",
+      "wowforeverguides"
+     ]
+    },
+    {
+     "name": "Glinteye Slippers",
+     "id": 273024,
+     "ilvl": 31,
+     "reqLevel": 26,
+     "slot": "Feet",
+     "type": "Cloth",
+     "quality": "rare",
+     "boss": "Saltspine",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": 9,
+      "int": null,
+      "spi": 6,
+      "armor": 33,
+      "dps": null,
+      "speed": null,
+      "other": "+7 spell damage/healing"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead",
+      "wowforeverguides"
+     ]
+    },
+    {
+     "name": "Raptorclaw Greaves",
+     "id": 273025,
+     "ilvl": 31,
+     "reqLevel": 26,
+     "slot": "Feet",
+     "type": "Mail",
+     "quality": "rare",
+     "boss": "Shadetooth",
+     "stats": {
+      "str": 7,
+      "agi": null,
+      "sta": 7,
+      "int": 6,
+      "spi": null,
+      "armor": 152,
+      "dps": null,
+      "speed": null
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead",
+      "wowforeverguides"
+     ]
+    },
+    {
+     "name": "Garb of Florid Feathers",
+     "id": 273026,
+     "ilvl": 31,
+     "reqLevel": 26,
+     "slot": "Chest",
+     "type": "Leather",
+     "quality": "rare",
+     "boss": "Shadetooth",
+     "stats": {
+      "str": null,
+      "agi": 9,
+      "sta": null,
+      "int": 15,
+      "spi": null,
+      "armor": 105,
+      "dps": null,
+      "speed": null
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead",
+      "wowforeverguides"
+     ]
+    },
+    {
+     "name": "Raptor's Gaze",
+     "id": 273027,
+     "ilvl": 31,
+     "reqLevel": 26,
+     "slot": "Off Hand",
+     "type": "Miscellaneous",
+     "quality": "rare",
+     "boss": "Shadetooth",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": 4,
+      "int": 4,
+      "spi": null,
+      "armor": null,
+      "dps": null,
+      "speed": null,
+      "other": "+8 spell damage/healing"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead",
+      "wowforeverguides"
+     ]
+    },
+    {
+     "name": "Reliquary Mantle",
+     "id": 273028,
+     "ilvl": 33,
+     "reqLevel": 28,
+     "slot": "Shoulder",
+     "type": "Mail",
+     "quality": "rare",
+     "boss": "Relic Guardian",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": 12,
+      "int": null,
+      "spi": null,
+      "armor": 171,
+      "dps": null,
+      "speed": null,
+      "other": "+0.4% hit"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead",
+      "wowforeverguides"
+     ]
+    },
+    {
+     "name": "Golemsight Long Gun",
+     "id": 273029,
+     "ilvl": 33,
+     "reqLevel": 28,
+     "slot": "Ranged",
+     "type": "Gun",
+     "quality": "rare",
+     "boss": "Relic Guardian",
+     "stats": {
+      "str": null,
+      "agi": 6,
+      "sta": null,
+      "int": null,
+      "spi": null,
+      "armor": null,
+      "dps": 16.6,
+      "speed": 2.5,
+      "damage": "29-54"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead",
+      "wowforeverguides"
+     ]
+    },
+    {
+     "name": "Ring of Power Regulation",
+     "id": 273030,
+     "ilvl": 33,
+     "reqLevel": 28,
+     "slot": "Finger",
+     "type": "Miscellaneous",
+     "quality": "rare",
+     "boss": "Relic Guardian",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": null,
+      "armor": null,
+      "dps": null,
+      "speed": null,
+      "other": "3 mana/5s; +6 spell damage/healing"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead",
+      "wowforeverguides"
+     ]
+    }
+   ],
+   "quests": [
+    {
+     "title": "Changing Tastes",
+     "questId": 95697,
+     "faction": "Horde",
+     "level": 24,
+     "giver": "Borstan (Orgrimmar)",
+     "rewards": [
+      {
+       "name": "Satchel of Potions",
+       "id": 280766,
+       "slot": "Trinket",
+       "type": "Miscellaneous",
+       "ilvl": 33,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": null,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": null,
+        "speed": null,
+        "other": "Use: random potion (10 min CD)"
+       }
+      },
+      {
+       "name": "Serrated Raptor Claw",
+       "id": 280805,
+       "slot": "One-Hand",
+       "type": "Dagger",
+       "ilvl": 33,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": 3,
+        "sta": null,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": 17.19,
+        "speed": 1.6,
+        "damage": "19-36",
+        "other": "+6 AP"
+       }
+      }
+     ]
+    },
+    {
+     "title": "Dragonmaw Rumors",
+     "questId": 95663,
+     "faction": "Horde",
+     "level": null,
+     "giver": "Zaruk (Hammerfall, Arathi Highlands)",
+     "rewards": []
+    },
+    {
+     "title": "Open the Maw",
+     "questId": 95682,
+     "faction": "Horde",
+     "level": 24,
+     "giver": "Deathstalker Agent (Wetlands)",
+     "rewards": [
+      {
+       "name": "Knife-Polishing Rag",
+       "id": 271740,
+       "slot": "Wrist",
+       "type": "Cloth",
+       "ilvl": 33,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": null,
+        "int": null,
+        "spi": 4,
+        "armor": 20,
+        "dps": null,
+        "speed": null,
+        "other": "+6 spell damage/healing"
+       }
+      },
+      {
+       "name": "Dirt-Heavy Bracers",
+       "id": 271732,
+       "slot": "Wrist",
+       "type": "Leather",
+       "ilvl": 33,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": null,
+        "int": null,
+        "spi": 4,
+        "armor": 43,
+        "dps": null,
+        "speed": null,
+        "other": "+10 AP"
+       }
+      }
+     ]
+    },
+    {
+     "title": "Elder Knowledge",
+     "questId": 95664,
+     "faction": "Horde",
+     "level": 24,
+     "giver": "Titan Relic (Relic Guardian drop); Bashana Runetotem (Thunder Bluff)",
+     "rewards": []
+    },
+    {
+     "title": "Earthen Echo",
+     "questId": 98823,
+     "faction": "Horde",
+     "level": 24,
+     "giver": "Bashana Runetotem (Thunder Bluff); ends Muln Earthfury",
+     "rewards": [
+      {
+       "name": "Furs of the Earthen Ring",
+       "id": 271719,
+       "slot": "Back",
+       "type": "Cloth",
+       "ilvl": 33,
+       "quality": "rare",
+       "reqLevel": null,
+       "stats": {
+        "str": 5,
+        "agi": null,
+        "sta": null,
+        "int": 5,
+        "spi": 5,
+        "armor": 25,
+        "dps": null,
+        "speed": null
+       }
+      },
+      {
+       "name": "Heavehammer",
+       "id": 271766,
+       "slot": "Two-Hand",
+       "type": "Mace",
+       "ilvl": 33,
+       "quality": "rare",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": null,
+        "int": null,
+        "spi": null,
+        "armor": 60,
+        "dps": 27.73,
+        "speed": 3.3,
+        "damage": "73-110",
+        "other": "+60 bonus armor; +32 AP"
+       }
+      },
+      {
+       "name": "Healer's Staff",
+       "id": 271767,
+       "slot": "Two-Hand",
+       "type": "Staff",
+       "ilvl": 33,
+       "quality": "rare",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": 12,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": 20.77,
+        "speed": 2.6,
+        "damage": "43-65",
+        "other": "5 mana/5s; +67 healing/+22 spell damage"
+       }
+      }
+     ]
+    },
+    {
+     "title": "Seeking Caitlin",
+     "questId": 95737,
+     "faction": "Alliance",
+     "level": 24,
+     "giver": "Llana (Ashenvale)",
+     "rewards": []
+    },
+    {
+     "title": "Songblade Search",
+     "questId": 95772,
+     "faction": "Alliance",
+     "level": 24,
+     "giver": "Dorin Songblade (Redridge Mountains)",
+     "rewards": []
+    },
+    {
+     "title": "Fallen in the Fen",
+     "questId": 95795,
+     "faction": "Alliance",
+     "level": 24,
+     "giver": "Daewyn Songblade (Whelgar's Excavation Site)",
+     "rewards": [
+      {
+       "name": "Daewyn's Girdle",
+       "id": 271769,
+       "slot": "Waist",
+       "type": "Cloth",
+       "ilvl": 33,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": null,
+        "int": null,
+        "spi": 6,
+        "armor": 25,
+        "dps": null,
+        "speed": null,
+        "other": "+7 spell damage/healing"
+       }
+      },
+      {
+       "name": "Songblade Stabilizer",
+       "id": 271768,
+       "slot": "Waist",
+       "type": "Mail",
+       "ilvl": 33,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": 6,
+        "int": null,
+        "spi": null,
+        "armor": 128,
+        "dps": null,
+        "speed": null,
+        "other": "+0.4% dodge"
+       }
+      }
+     ]
+    },
+    {
+     "title": "Horrors in the Highland",
+     "questId": 95646,
+     "faction": "Alliance",
+     "level": 24,
+     "giver": "Rethiel the Greenwarden (Wetlands)",
+     "rewards": [
+      {
+       "name": "Ironwood Destroyer",
+       "id": 271667,
+       "slot": "Two-Hand",
+       "type": "Mace",
+       "ilvl": 33,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": null,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": 22.21,
+        "speed": 3.4,
+        "damage": "60-91",
+        "other": "+19 Nature spell damage"
+       }
+      },
+      {
+       "name": "Curl of Life",
+       "id": 271670,
+       "slot": "Finger",
+       "type": "Miscellaneous",
+       "ilvl": 33,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": 5,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": null,
+        "speed": null,
+        "other": "+5 spell damage/healing"
+       }
+      },
+      {
+       "name": "Hornbeam Heft",
+       "id": 271664,
+       "slot": "One-Hand",
+       "type": "Axe",
+       "ilvl": 33,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": 6,
+        "agi": null,
+        "sta": null,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": 11.46,
+        "speed": 2.4,
+        "damage": "19-36",
+        "other": "+26 spell damage/healing"
+       }
+      }
+     ]
+    },
+    {
+     "title": "Highland Hides",
+     "questId": 98815,
+     "faction": "Alliance",
+     "level": 24,
+     "giver": "James Halloran (Menethil Harbor)",
+     "rewards": []
+    },
+    {
+     "title": "Lost in the Thicket Things",
+     "questId": 95647,
+     "faction": "Alliance",
+     "level": 24,
+     "giver": "Caitlin Grassman (Menethil Harbor)",
+     "rewards": []
+    },
+    {
+     "title": "Heartwoven",
+     "questId": 95809,
+     "faction": "Alliance",
+     "level": null,
+     "giver": "Ardin Grassman (Wetlands)",
+     "rewards": [
+      {
+       "name": "Satchel of Potions",
+       "id": 280766,
+       "slot": "Trinket",
+       "type": "Miscellaneous",
+       "ilvl": 33,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": null,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": null,
+        "speed": null,
+        "other": "Use: random potion (10 min CD)"
+       }
+      }
+     ]
+    },
+    {
+     "title": "Lost Relic Carry",
+     "questId": 95810,
+     "faction": "Alliance",
+     "level": 24,
+     "giver": "Titan Relic (Relic Guardian drop); Prospector Whelgar (Wetlands)",
+     "rewards": []
+    },
+    {
+     "title": "Prehistoric Prism",
+     "questId": 98824,
+     "faction": "Alliance",
+     "level": 24,
+     "giver": "Prospector Whelgar (Wetlands); ends High Explorer Magellas (Ironforge)",
+     "rewards": [
+      {
+       "name": "Explorer's League Dustcover",
+       "id": 271716,
+       "slot": "Back",
+       "type": "Cloth",
+       "ilvl": 33,
+       "quality": "rare",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": 5,
+        "sta": null,
+        "int": 5,
+        "spi": 5,
+        "armor": 25,
+        "dps": null,
+        "speed": null
+       }
+      },
+      {
+       "name": "Heavehammer",
+       "id": 271766,
+       "slot": "Two-Hand",
+       "type": "Mace",
+       "ilvl": 33,
+       "quality": "rare",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": null,
+        "int": null,
+        "spi": null,
+        "armor": 60,
+        "dps": 27.73,
+        "speed": 3.3,
+        "damage": "73-110",
+        "other": "+60 bonus armor; +32 AP"
+       }
+      },
+      {
+       "name": "Healer's Staff",
+       "id": 271767,
+       "slot": "Two-Hand",
+       "type": "Staff",
+       "ilvl": 33,
+       "quality": "rare",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": 12,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": 20.77,
+        "speed": 2.6,
+        "damage": "43-65",
+        "other": "5 mana/5s; +67 healing/+22 spell damage"
+       }
+      }
+     ]
+    }
+   ],
+   "sourceUrls": [
+    "https://www.zockify.com/forever/dungeons/excavation-site-wetlands/",
+    "https://wowtbc.gg/warcraftforever/loot-tables/dungeons/excavation-site-wetlands/",
+    "https://www.wowhead.com/forever/zone=16732/excavation-site-wetlands",
+    "https://www.wowhead.com/forever/guide=34967",
+    "https://wowforeverguides.com/dungeons/excavation-site-wetlands"
+   ]
+  },
+  {
+   "key": "CityOfDalaran",
+   "name": "City of Dalaran",
+   "minLevel": 28,
+   "maxLevel": 33,
+   "zone": "Alterac Mountains",
+   "entrance": {
+    "zone": "Alterac Mountains",
+    "x": 8.8,
+    "y": 59.6,
+    "note": "Horde tunnel /way 8.8,59.6 (needs Dalaran Sewer Key); Alliance via Cantrips & Crows sewer pipe. KamiLabs gives ~16.3,65.8."
+   },
+   "bosses": [
+    "Atrexis the Grave Knight",
+    "Arcane Anomaly",
+    "Arcanic Enigma (Mana Elemental)",
+    "Unstable Sentinel",
+    "Mana Devourer",
+    "Fel Ancient",
+    "Lyn the Ignored",
+    "Shade of the Archmage",
+    "Mana Wraith"
+   ],
+   "loot": [
+    {
+     "name": "Bonebinder's Signet",
+     "id": 273032,
+     "ilvl": 31,
+     "reqLevel": 25,
+     "slot": "Finger",
+     "type": "Miscellaneous",
+     "quality": "rare",
+     "boss": "Atrexis the Grave Knight",
+     "stats": {
+      "str": 5,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": 6,
+      "armor": 40,
+      "dps": null,
+      "speed": null
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Gravespike Repeater",
+     "id": 273033,
+     "ilvl": 31,
+     "reqLevel": 26,
+     "slot": "Ranged",
+     "type": "Crossbow",
+     "quality": "rare",
+     "boss": "Atrexis the Grave Knight",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": null,
+      "armor": null,
+      "dps": 15.43,
+      "speed": 2.3,
+      "damage": "28-43",
+      "other": "+8 AP; +9 AP vs Humanoids"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Graveweave Bindings",
+     "id": 273036,
+     "ilvl": 31,
+     "reqLevel": 26,
+     "slot": "Wrist",
+     "type": "Cloth",
+     "quality": "rare",
+     "boss": "Atrexis the Grave Knight",
+     "stats": {
+      "str": 6,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": null,
+      "armor": 21,
+      "dps": null,
+      "speed": null,
+      "other": "2 mana/5s; +5 spell damage/healing"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Runemender's Seal",
+     "id": 273031,
+     "ilvl": 32,
+     "reqLevel": 27,
+     "slot": "Finger",
+     "type": "Miscellaneous",
+     "quality": "rare",
+     "boss": "Arcane Anomaly",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": 4,
+      "int": null,
+      "spi": 7,
+      "armor": null,
+      "dps": null,
+      "speed": null,
+      "other": "+9 healing/+3 spell damage"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Ephemeral Grips",
+     "id": 273034,
+     "ilvl": 32,
+     "reqLevel": 27,
+     "slot": "Hands",
+     "type": "Cloth",
+     "quality": "rare",
+     "boss": "Arcane Anomaly",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": 7,
+      "int": 7,
+      "spi": null,
+      "armor": 31,
+      "dps": null,
+      "speed": null,
+      "other": "+9 Shadow and +9 Arcane spell damage"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Mana-Warped Chain Shirt",
+     "id": 273035,
+     "ilvl": 32,
+     "reqLevel": 27,
+     "slot": "Chest",
+     "type": "Mail",
+     "quality": "rare",
+     "boss": "Arcane Anomaly",
+     "stats": {
+      "str": 12,
+      "agi": null,
+      "sta": 8,
+      "int": null,
+      "spi": null,
+      "armor": 225,
+      "dps": null,
+      "speed": null,
+      "other": "3 mana/5s"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Wand of Mana Concentration",
+     "id": 273043,
+     "ilvl": 32,
+     "reqLevel": 27,
+     "slot": "Ranged",
+     "type": "Wand",
+     "quality": "rare",
+     "boss": "Arcanic Enigma",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": 4,
+      "spi": null,
+      "armor": null,
+      "dps": 31.18,
+      "speed": 1.7,
+      "damage": "37-69 Arcane",
+      "other": "2 mana/5s"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Violet Sorcerer's Robes",
+     "id": 273044,
+     "ilvl": 32,
+     "reqLevel": 27,
+     "slot": "Chest",
+     "type": "Cloth",
+     "quality": "rare",
+     "boss": "Arcanic Enigma",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": 15,
+      "spi": null,
+      "armor": 49,
+      "dps": null,
+      "speed": null,
+      "other": "+9 spell damage/healing; threat-reduction proc"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Drape of Shifting Energy",
+     "id": 273045,
+     "ilvl": 32,
+     "reqLevel": 27,
+     "slot": "Back",
+     "type": "Cloth",
+     "quality": "rare",
+     "boss": "Arcanic Enigma",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": 7,
+      "armor": 24,
+      "dps": null,
+      "speed": null,
+      "other": "+12 AP"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead",
+      "wowforeverguides"
+     ]
+    },
+    {
+     "name": "Guardian's Dualblade",
+     "id": 273046,
+     "ilvl": 33,
+     "reqLevel": 28,
+     "slot": "Two-Hand",
+     "type": "Axe",
+     "quality": "rare",
+     "boss": "Unstable Sentinel",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": null,
+      "armor": null,
+      "dps": 27.86,
+      "speed": 3.5,
+      "damage": "78-117",
+      "other": "When damaged 33%: +1080 armor 12s (1 min CD)"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead",
+      "wowforeverguides"
+     ]
+    },
+    {
+     "name": "Unstable Crystalline Shoulderpads",
+     "id": 273047,
+     "ilvl": 33,
+     "reqLevel": 28,
+     "slot": "Shoulder",
+     "type": "Leather",
+     "quality": "rare",
+     "boss": "Unstable Sentinel",
+     "stats": {
+      "str": null,
+      "agi": 9,
+      "sta": 6,
+      "int": null,
+      "spi": null,
+      "armor": 81,
+      "dps": null,
+      "speed": null,
+      "other": "2 mana/5s"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Refractory Scaleguards",
+     "id": 273048,
+     "ilvl": 33,
+     "reqLevel": 28,
+     "slot": "Legs",
+     "type": "Mail",
+     "quality": "rare",
+     "boss": "Unstable Sentinel",
+     "stats": {
+      "str": 12,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": null,
+      "armor": 199,
+      "dps": null,
+      "speed": null,
+      "other": "+100 bonus armor; +5 Arcane Resistance"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Spine of the Devourer",
+     "id": 273040,
+     "ilvl": 33,
+     "reqLevel": 28,
+     "slot": "Two-Hand",
+     "type": "Staff",
+     "quality": "rare",
+     "boss": "Mana Devourer",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": 14,
+      "int": null,
+      "spi": null,
+      "armor": null,
+      "dps": 20.69,
+      "speed": 3.6,
+      "damage": "59-90",
+      "other": "+3 spell penetration; +36 spell damage/healing"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Slitherwrap Girdle",
+     "id": 273041,
+     "ilvl": 33,
+     "reqLevel": 28,
+     "slot": "Waist",
+     "type": "Leather",
+     "quality": "rare",
+     "boss": "Mana Devourer",
+     "stats": {
+      "str": null,
+      "agi": 9,
+      "sta": 6,
+      "int": null,
+      "spi": null,
+      "armor": 61,
+      "dps": null,
+      "speed": null,
+      "other": "Drains 2 mana from attackers"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Manascale Treads",
+     "id": 273042,
+     "ilvl": 33,
+     "reqLevel": 28,
+     "slot": "Feet",
+     "type": "Mail",
+     "quality": "rare",
+     "boss": "Mana Devourer",
+     "stats": {
+      "str": 7,
+      "agi": null,
+      "sta": null,
+      "int": 7,
+      "spi": null,
+      "armor": 157,
+      "dps": null,
+      "speed": null,
+      "other": "+0.5% crit"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Felbough Arm",
+     "id": 273037,
+     "ilvl": 34,
+     "reqLevel": 29,
+     "slot": "Two-Hand",
+     "type": "Polearm",
+     "quality": "rare",
+     "boss": "Fel Ancient",
+     "stats": {
+      "str": null,
+      "agi": 10,
+      "sta": null,
+      "int": null,
+      "spi": null,
+      "armor": null,
+      "dps": 28.83,
+      "speed": 3.0,
+      "damage": "69-104",
+      "other": "+9 Nature Resistance; +1% hit"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Garb of Fallen Felbark",
+     "id": 273038,
+     "ilvl": 34,
+     "reqLevel": 29,
+     "slot": "Chest",
+     "type": "Leather",
+     "quality": "rare",
+     "boss": "Fel Ancient",
+     "stats": {
+      "str": null,
+      "agi": 9,
+      "sta": 7,
+      "int": 13,
+      "spi": null,
+      "armor": 110,
+      "dps": null,
+      "speed": null
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Blightleaf Rope",
+     "id": 273039,
+     "ilvl": 34,
+     "reqLevel": 29,
+     "slot": "Waist",
+     "type": "Cloth",
+     "quality": "rare",
+     "boss": "Fel Ancient",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": 10,
+      "spi": null,
+      "armor": 28,
+      "dps": null,
+      "speed": null,
+      "other": "5 health/5s; +7 spell damage/healing"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Tendonscraper Dagger",
+     "id": 273053,
+     "ilvl": 33,
+     "reqLevel": 28,
+     "slot": "Main Hand",
+     "type": "Dagger",
+     "quality": "rare",
+     "boss": "Lyn the Ignored",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": 5,
+      "int": null,
+      "spi": null,
+      "armor": null,
+      "dps": 14.38,
+      "speed": 1.6,
+      "damage": "16-30",
+      "other": "8 health/5s; +36 spell damage/healing"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Cartilage Shapers",
+     "id": 273054,
+     "ilvl": 33,
+     "reqLevel": 28,
+     "slot": "Hands",
+     "type": "Leather",
+     "quality": "rare",
+     "boss": "Lyn the Ignored",
+     "stats": {
+      "str": null,
+      "agi": 9,
+      "sta": null,
+      "int": null,
+      "spi": 8,
+      "armor": 68,
+      "dps": null,
+      "speed": null,
+      "other": "+4 Skinning"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Bonepile Gaze",
+     "id": 273055,
+     "ilvl": 33,
+     "reqLevel": 28,
+     "slot": "Off Hand",
+     "type": "Shield",
+     "quality": "rare",
+     "boss": "Lyn the Ignored",
+     "stats": {
+      "str": 5,
+      "agi": null,
+      "sta": 5,
+      "int": null,
+      "spi": null,
+      "armor": 718,
+      "dps": null,
+      "speed": null,
+      "other": "15 block; +8 block value"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Archmagister's Faceted Pendant",
+     "id": 273049,
+     "ilvl": 35,
+     "reqLevel": 30,
+     "slot": "Neck",
+     "type": "Miscellaneous",
+     "quality": "rare",
+     "boss": "Shade of the Archmage",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": 6,
+      "spi": null,
+      "armor": null,
+      "dps": null,
+      "speed": null,
+      "other": "+12 AP; Use: +10% XP from Undead 5 min"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Violet Sorcerer's Mantle",
+     "id": 273051,
+     "ilvl": 35,
+     "reqLevel": 30,
+     "slot": "Shoulder",
+     "type": "Cloth",
+     "quality": "rare",
+     "boss": "Shade of the Archmage",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": 9,
+      "spi": null,
+      "armor": 38,
+      "dps": null,
+      "speed": null,
+      "other": "+4 spell penetration; Violet Sorcerer's Vestments set"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Ponderous Orb",
+     "id": 273052,
+     "ilvl": 35,
+     "reqLevel": 30,
+     "slot": "Off Hand",
+     "type": "Miscellaneous",
+     "quality": "rare",
+     "boss": "Shade of the Archmage",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": 2,
+      "spi": 8,
+      "armor": null,
+      "dps": null,
+      "speed": null,
+      "other": "+11 healing/+4 spell damage"
+     },
+     "sources": [
+      "zockify",
+      "wowtbc",
+      "wowhead",
+      "wowforeverguides"
+     ]
+    }
+   ],
+   "quests": [
+    {
+     "title": "A Green Sample",
+     "questId": 92456,
+     "faction": "Alliance",
+     "level": 33,
+     "minLevel": 24,
+     "giver": "Shylamiir (Stormwind City)",
+     "rewards": [
+      {
+       "name": "Vine Pruner's Cloak",
+       "id": 279835,
+       "slot": "Back",
+       "type": "Cloth",
+       "ilvl": 36,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": 6,
+        "int": null,
+        "spi": null,
+        "armor": 26,
+        "dps": null,
+        "speed": null,
+        "other": "+5 spell damage/healing; +5 vs Elementals"
+       }
+      },
+      {
+       "name": "Thorn Protecting Girdle",
+       "id": 279836,
+       "slot": "Waist",
+       "type": "Mail",
+       "ilvl": 36,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": 8,
+        "int": null,
+        "spi": null,
+        "armor": 134,
+        "dps": null,
+        "speed": null,
+        "other": "+12 AP; +9 AP vs Elementals"
+       }
+      }
+     ]
+    },
+    {
+     "title": "Power Overwhelming",
+     "questId": 92489,
+     "faction": "Alliance",
+     "level": 33,
+     "minLevel": 24,
+     "giver": "High Sorcerer Andromath (Stormwind City)",
+     "rewards": [
+      {
+       "name": "Violet Sash",
+       "id": 251962,
+       "slot": "Waist",
+       "type": "Cloth",
+       "ilvl": 36,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": null,
+        "int": 9,
+        "spi": null,
+        "armor": 29,
+        "dps": null,
+        "speed": null,
+        "other": "+6 spell damage/healing"
+       }
+      },
+      {
+       "name": "Runebound Gloves",
+       "id": 279849,
+       "slot": "Hands",
+       "type": "Leather",
+       "ilvl": 36,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": 7,
+        "int": null,
+        "spi": 4,
+        "armor": 71,
+        "dps": null,
+        "speed": null,
+        "other": "+12 AP"
+       }
+      }
+     ]
+    },
+    {
+     "title": "Starving Arcane",
+     "questId": 92457,
+     "faction": "Alliance",
+     "level": 33,
+     "minLevel": 24,
+     "giver": "Archmage Modera (Alterac Mountains, outside Dalaran)",
+     "rewards": [
+      {
+       "name": "Fallen Guard's Pendant",
+       "id": 279837,
+       "slot": "Neck",
+       "type": "Miscellaneous",
+       "ilvl": 36,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": 3,
+        "agi": null,
+        "sta": null,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": null,
+        "speed": null
+       }
+      },
+      {
+       "name": "Arcane Infused Rod",
+       "id": 279838,
+       "slot": "Off Hand",
+       "type": "Miscellaneous",
+       "ilvl": 36,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": null,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": null,
+        "speed": null,
+        "other": "+11 Arcane spell damage"
+       }
+      }
+     ]
+    },
+    {
+     "title": "Heart of Disruption",
+     "questId": 92458,
+     "faction": "Alliance",
+     "level": 33,
+     "minLevel": 24,
+     "giver": "Image of Archmage Modera (near Dalaran)",
+     "rewards": [
+      {
+       "name": "Spellguard Pauldrons",
+       "id": 279839,
+       "slot": "Shoulder",
+       "type": "Mail",
+       "ilvl": 36,
+       "quality": "rare",
+       "reqLevel": null,
+       "stats": {
+        "str": 4,
+        "agi": null,
+        "sta": 11,
+        "int": 7,
+        "spi": null,
+        "armor": 178,
+        "dps": null,
+        "speed": null
+       }
+      },
+      {
+       "name": "Renewing Footpads",
+       "id": 279840,
+       "slot": "Feet",
+       "type": "Leather",
+       "ilvl": 36,
+       "quality": "rare",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": 5,
+        "int": 11,
+        "spi": null,
+        "armor": 78,
+        "dps": null,
+        "speed": null,
+        "other": "+11 healing/+4 spell damage"
+       }
+      },
+      {
+       "name": "Defender of Dalaran",
+       "id": 279841,
+       "slot": "Two-Hand",
+       "type": "Mace",
+       "ilvl": 36,
+       "quality": "rare",
+       "reqLevel": null,
+       "stats": {
+        "str": 9,
+        "agi": null,
+        "sta": 13,
+        "int": 9,
+        "spi": null,
+        "armor": null,
+        "dps": 31.21,
+        "speed": 3.3,
+        "damage": "82-124"
+       }
+      }
+     ]
+    },
+    {
+     "title": "Heart of Disruption",
+     "questId": 96984,
+     "faction": "Horde",
+     "level": 33,
+     "minLevel": 24,
+     "giver": "Image of Archmage Modera (near Dalaran); ends Magus Wordeen Voidglare (Tarren Mill)",
+     "rewards": [
+      {
+       "name": "Battle Spaulders",
+       "id": 279842,
+       "slot": "Shoulder",
+       "type": "Mail",
+       "ilvl": 36,
+       "quality": "rare",
+       "reqLevel": null,
+       "stats": {
+        "str": 4,
+        "agi": null,
+        "sta": 11,
+        "int": null,
+        "spi": 7,
+        "armor": 178,
+        "dps": null,
+        "speed": null
+       }
+      },
+      {
+       "name": "Enchanted Sandals",
+       "id": 279843,
+       "slot": "Feet",
+       "type": "Cloth",
+       "ilvl": 36,
+       "quality": "rare",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": 10,
+        "int": null,
+        "spi": null,
+        "armor": 36,
+        "dps": null,
+        "speed": null,
+        "other": "+50 bonus armor; +9 spell damage/healing"
+       }
+      },
+      {
+       "name": "Striking Staff",
+       "id": 279844,
+       "slot": "Two-Hand",
+       "type": "Staff",
+       "ilvl": 36,
+       "quality": "rare",
+       "reqLevel": null,
+       "stats": {
+        "str": 9,
+        "agi": null,
+        "sta": 6,
+        "int": 14,
+        "spi": null,
+        "armor": null,
+        "dps": 31.29,
+        "speed": 3.1,
+        "damage": "77-117"
+       }
+      }
+     ]
+    },
+    {
+     "title": "The Grave Knight",
+     "questId": 96986,
+     "faction": "Horde",
+     "level": 33,
+     "minLevel": 24,
+     "giver": "Melisara (Tarren Mill, Hillsbrad Foothills)",
+     "rewards": [
+      {
+       "name": "Gravewalker Boots",
+       "id": 251963,
+       "slot": "Feet",
+       "type": "Leather",
+       "ilvl": 36,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": 5,
+        "sta": 7,
+        "int": null,
+        "spi": 5,
+        "armor": 78,
+        "dps": null,
+        "speed": null
+       }
+      },
+      {
+       "name": "Undead Knight's Bracers",
+       "id": 251965,
+       "slot": "Wrist",
+       "type": "Mail",
+       "ilvl": 36,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": 3,
+        "agi": null,
+        "sta": 6,
+        "int": 3,
+        "spi": null,
+        "armor": 104,
+        "dps": null,
+        "speed": null
+       }
+      }
+     ]
+    },
+    {
+     "title": "Opportunistic Education",
+     "questId": 96987,
+     "faction": "Horde",
+     "level": 33,
+     "minLevel": 24,
+     "giver": "Rexxie Copperclutch (Alterac Mountains, near sewer entrance)",
+     "rewards": [
+      {
+       "name": "Solid Gold Band",
+       "id": 279845,
+       "slot": "Finger",
+       "type": "Miscellaneous",
+       "ilvl": 36,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": null,
+        "int": null,
+        "spi": 5,
+        "armor": null,
+        "dps": null,
+        "speed": null,
+        "other": "+11 healing/+4 spell damage"
+       }
+      },
+      {
+       "name": "Larcenist's Belt",
+       "id": 279846,
+       "slot": "Waist",
+       "type": "Leather",
+       "ilvl": 36,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": 6,
+        "sta": 8,
+        "int": null,
+        "spi": null,
+        "armor": 58,
+        "dps": null,
+        "speed": null
+       }
+      }
+     ]
+    },
+    {
+     "title": "Source of Power",
+     "questId": 96988,
+     "faction": "Horde",
+     "level": 33,
+     "minLevel": 24,
+     "giver": "Doctor Martin Felben (Undercity)",
+     "rewards": [
+      {
+       "name": "Unstable Power Core",
+       "id": 279847,
+       "slot": "Ranged",
+       "type": "Wand",
+       "ilvl": 36,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": null,
+        "agi": null,
+        "sta": 4,
+        "int": null,
+        "spi": null,
+        "armor": null,
+        "dps": 29.71,
+        "speed": 1.7,
+        "damage": "35-66"
+       }
+      },
+      {
+       "name": "Construct Cloak",
+       "id": 279848,
+       "slot": "Back",
+       "type": "Cloth",
+       "ilvl": 36,
+       "quality": "uncommon",
+       "reqLevel": null,
+       "stats": {
+        "str": 5,
+        "agi": null,
+        "sta": null,
+        "int": null,
+        "spi": 5,
+        "armor": 26,
+        "dps": null,
+        "speed": null
+       }
+      }
+     ]
+    }
+   ],
+   "sourceUrls": [
+    "https://www.zockify.com/forever/dungeons/city-of-dalaran/",
+    "https://wowtbc.gg/warcraftforever/loot-tables/dungeons/city-of-dalaran/",
+    "https://foreverchanges.pro/quests/city-of-dalaran",
+    "https://wowforeverguides.com/dungeons/city-of-dalaran",
+    "https://kami-labs.fr/en/cite-de-dalaran-wow-forever/",
+    "https://nether.wowhead.com/forever/tooltip/item/<id>"
+   ]
+  },
+  {
+   "key": "DrownedCity",
+   "name": "The Drowned City",
+   "minLevel": 35,
+   "maxLevel": 40,
+   "zone": "Stranglethorn Vale",
+   "entrance": {
+    "zone": "Stranglethorn Vale",
+    "x": null,
+    "y": null,
+    "note": "Underwater off the STV coast (Gillijim's Isle / Sunken Hollow), guarded by naga. Not yet open in beta."
+   },
+   "bosses": [
+    "Zul'Alai",
+    "Var'Taka",
+    "Captain Dreadrise",
+    "Deathless Marrow",
+    "Primeval Elemental",
+    "Gill",
+    "Min'loth the Serpent",
+    "Zin'aka"
+   ],
+   "loot": [
+    {
+     "name": "Saltseer's Helm",
+     "id": 279930,
+     "ilvl": 42,
+     "reqLevel": null,
+     "slot": "Head",
+     "type": "Leather",
+     "quality": "rare",
+     "boss": null,
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": 18,
+      "spi": 7,
+      "armor": 103,
+      "dps": null,
+      "speed": null,
+      "other": "+12 spell damage/healing"
+     },
+     "sources": [
+      "wowforeverguides",
+      "wowhead"
+     ]
+    },
+    {
+     "name": "Heart of the Primeval",
+     "id": null,
+     "ilvl": null,
+     "reqLevel": null,
+     "slot": "Trinket",
+     "type": "Miscellaneous",
+     "quality": null,
+     "boss": "Primeval Elemental",
+     "stats": {
+      "str": null,
+      "agi": null,
+      "sta": null,
+      "int": null,
+      "spi": null,
+      "armor": null,
+      "dps": null,
+      "speed": null,
+      "other": "+10 Frost Resistance; Use: +19 spell damage/healing and +19 Frost Resistance (1.5 min CD)"
+     },
+     "sources": [
+      "wowforeverguides"
+     ]
+    }
+   ],
+   "quests": [
+    {
+     "title": "The Only Good Brinescale...",
+     "questId": null,
+     "faction": "Horde",
+     "level": 30,
+     "giver": "Giver of 'Enemies in the Water' (likely Grom'gol Base Camp, unconfirmed)",
+     "rewards": [
+      {
+       "name": "Tidesoaked Leggings",
+       "id": null,
+       "slot": null,
+       "type": null,
+       "ilvl": null,
+       "quality": null,
+       "reqLevel": null,
+       "stats": null
+      },
+      {
+       "name": "Naga Priestess's Mantle",
+       "id": null,
+       "slot": null,
+       "type": null,
+       "ilvl": null,
+       "quality": null,
+       "reqLevel": null,
+       "stats": null
+      }
+     ]
+    },
+    {
+     "title": "The Drowned City",
+     "questId": 95775,
+     "faction": "Horde",
+     "level": 30,
+     "giver": "Unconfirmed (likely Kin'weelay, Grom'gol Base Camp)",
+     "rewards": []
+    },
+    {
+     "title": "Ancient Gurubashi Idol",
+     "questId": null,
+     "faction": "Horde",
+     "level": 30,
+     "giver": "Mazu'kon (Mulgore)",
+     "rewards": []
+    },
+    {
+     "title": "The Vile Reef",
+     "questId": null,
+     "faction": "Horde",
+     "level": 30,
+     "giver": "Kin'weelay (Grom'gol Base Camp)",
+     "rewards": []
+    }
+   ],
+   "notes": "Unreleased in beta; Saltseer's Helm boss unknown (wowforeverguides lists under dungeon loot without source). Quest data from beta client via zockify.",
+   "sourceUrls": [
+    "https://www.zockify.com/forever/dungeons/the-drowned-city/",
+    "https://wowtbc.gg/warcraftforever/loot-tables/dungeons/the-drowned-city/",
+    "https://wowforeverguides.com/dungeons/the-drowned-city",
+    "https://wowforever.wclbox.com/en/fuben/the-drowned-city"
+   ]
+  },
+  {
+   "key": "KroldokStronghold",
+   "name": "Krol'dok Stronghold",
+   "minLevel": 40,
+   "maxLevel": 45,
+   "zone": "Riverglades",
+   "entrance": {
+    "zone": "Riverglades",
+    "x": 37.5,
+    "y": 37.5,
+    "note": "Cave beside a meeting stone in northern Riverglades (reported). Not playable in beta."
+   },
+   "bosses": [
+    "Overlord Mugg (final, reported)"
+   ],
+   "loot": [],
+   "quests": [],
+   "notes": "No loot/quest data published yet. Krol'dok Battlegear 5-piece set (ItemSet 2135) datamined, no stats.",
+   "sourceUrls": [
+    "https://wowforeverguides.com/dungeons/kroldok-stronghold",
+    "https://wowforever.wclbox.com/en/fuben/kroldok-stronghold",
+    "https://wowtbc.gg/warcraftforever/loot-tables/dungeons/krol-dok-stronghold/"
+   ]
+  },
+  {
+   "key": "AlcazPrison",
+   "name": "Alcaz Prison",
+   "minLevel": 48,
+   "maxLevel": 53,
+   "zone": "Dustwallow Marsh",
+   "entrance": {
+    "zone": "Dustwallow Marsh",
+    "x": null,
+    "y": null,
+    "note": "Alcaz Island, off the far northeast coast of Dustwallow Marsh."
+   },
+   "bosses": [
+    "Blazeroar (final, reported)"
+   ],
+   "loot": [],
+   "quests": [],
+   "notes": "No loot/quest data published yet.",
+   "sourceUrls": [
+    "https://wowforeverguides.com/dungeons/alcaz-prison",
+    "https://wowforever.wclbox.com/en/fuben/alcaz-prison",
+    "https://wowtbc.gg/warcraftforever/loot-tables/dungeons/alcaz-prison/"
+   ]
+  },
+  {
+   "key": "BlackmawHold",
+   "name": "Blackmaw Hold",
+   "minLevel": 55,
+   "maxLevel": 60,
+   "zone": "Azshara",
+   "entrance": {
+    "zone": "Azshara",
+    "x": null,
+    "y": null,
+    "note": "North Azshara, behind the Furbolg Gates (old Timbermaw Hold gate spot)."
+   },
+   "bosses": [],
+   "loot": [],
+   "quests": [],
+   "notes": "No boss/loot data published yet.",
+   "sourceUrls": [
+    "https://wowforeverguides.com/dungeons/blackmaw-hold",
+    "https://wowforever.wclbox.com/en/fuben/blackmaw-hold",
+    "https://wowtbc.gg/warcraftforever/loot-tables/dungeons/blackmaw-hold/"
+   ]
+  },
+  {
+   "key": "ShapersTerrace",
+   "name": "Shaper's Terrace",
+   "minLevel": 58,
+   "maxLevel": 60,
+   "zone": "Un'Goro Crater",
+   "entrance": {
+    "zone": "Un'Goro Crater",
+    "x": null,
+    "y": null,
+    "note": "Un'Goro Crater; location not published."
+   },
+   "bosses": [],
+   "loot": [],
+   "quests": [],
+   "notes": "No boss/loot data published yet.",
+   "sourceUrls": [
+    "https://wowforever.wclbox.com/en/fuben/shapers-terrace",
+    "https://wowtbc.gg/warcraftforever/loot-tables/dungeons/shaper-s-terrace/",
+    "https://classicwow.gg/forever/dungeons"
+   ]
+  }
+ ]
+}

@@ -655,3 +655,11 @@ L["Drop totems only for long or group fights; they cost a lot of mana."] = "Pose
 L["Use the slowest, strongest two-handed weapon you can find."] = "Utilise l'arme à deux mains la plus lente et la plus puissante que tu trouves."
 L["Finish enemies with your wand to save mana."] = "Achève les ennemis avec ta baguette pour économiser du mana."
 L["Keep a weapon imbue on your weapon: Rockbiter early, Windfury from level 30."] = "Garde un enchantement d'arme actif : Arme Croque-roc au début, Arme Furie-des-vents dès le niveau 30."
+
+-- v2.3 gear
+L["Trash mobs"] = "Monstres du donjon"
+L["New"] = "Nouveau"
+L["New in WoW Forever."] = "Nouveauté de WoW Forever."
+L["Its stats are not published yet: ranked from its item level and type."] = "Ses caractéristiques ne sont pas encore publiées : classé d'après son niveau d'objet et son type."
+L["New in WoW Forever: details appear once the item has been seen in game."] = "Nouveauté de WoW Forever : les détails apparaissent dès que l'objet a été vu en jeu."
+L["The 5 best items for each slot that you can get by this level, best first, with where to get them: quests, dungeon drops (new WoW Forever dungeons included), vendors and crafting. Rings and trinkets: wear the first two. Click an item with a quest or a vendor to point the arrow there. Shift-click: link in chat, Ctrl-click: try on."] = "Les 5 meilleurs objets de chaque emplacement accessibles à ce niveau, du meilleur au moins bon, avec où les obtenir : quêtes, butin de donjon (nouveaux donjons de WoW Forever compris), marchands et artisanat. Anneaux et bijoux : porte les deux premiers. Clique sur un objet de quête ou de marchand pour y pointer la flèche. Maj-clic : lien dans le chat, Ctrl-clic : essayer."

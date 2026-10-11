@@ -23,6 +23,17 @@ local SIDEBAR_WIDTH = 290
 ---------------------------------------------------------------------------
 -- Data
 ---------------------------------------------------------------------------
+-- Loot of the new WoW Forever dungeons can list an item by name when its ID was not published
+-- (details in ns.ForeverItems).  Returns the itemID once known (or once the game has seen the item).
+function ns.ResolveItem(key)
+	local info = ns.ForeverItems and ns.ForeverItems[key]
+	if type(key) == "number" then return key, info end
+	if info and info.id then return info.id, info end
+	local _, link = C_Item.GetItemInfo(key)
+	local id = link and not ns.IsSecret(link) and tonumber(link:match("item:(%d+)"))
+	return id, info
+end
+
 local function EntryName(entry)
 	if entry.kind == "world" then return L["World bosses"] end
 	return entry.name or ns.InstanceName(entry.id)
@@ -38,6 +49,16 @@ function Guide:BuildList()
 		if entry.id then known[entry.id] = true end
 	end
 	for id, data in pairs(ns.CollectedInstances and ns.CollectedInstances() or {}) do
+		-- a new Forever dungeon of the database gets its instance ID the first time someone goes in
+		if not known[id] and data.name then
+			for _, entry in ipairs(ns.InstanceDB or {}) do
+				if not entry.id and entry.name and entry.name:lower() == data.name:lower() then
+					entry.id = id
+					known[id] = true
+					break
+				end
+			end
+		end
 		if not known[id] then
 			local entry = { id = id, name = data.name or ns.InstanceName(id), kind = data.kind == "raid" and "raid" or "dungeon", size = data.size, collected = true }
 			for _, raid in ipairs(ns.ForeverRaids) do
@@ -168,6 +189,9 @@ local function NpcLine(npc)
 	if not npc then return UI.Colorize("?", C.muted) end
 	if npc[6] then return string.format(L["Starts from an item: %s"], UI.Colorize(npc[1], C.gold)) end
 	if npc[5] == 1 then return UI.Colorize(npc[1], C.gold) .. "  ·  " .. L["inside the instance"] end
+	-- new Forever quests: position given on a zone map { uiMapID, x, y }, or no position at all
+	if npc[8] then return UI.Colorize(npc[1], C.gold) .. "  ·  " .. ns.MapName(npc[8][1]) .. string.format(" (%.1f, %.1f)", npc[8][2] * 100, npc[8][3] * 100) end
+	if not npc[2] then return UI.Colorize(npc[1], C.gold) end
 	return UI.Colorize(npc[1], C.gold) .. "  ·  " .. Place(npc[2], npc[3], npc[4])
 end
 
@@ -223,7 +247,16 @@ local itemRows = UI.Pool(function(parent)
 	row:SetScript("OnEnter", function(self)
 		self.bg:SetVertexColor(C.hover[1], C.hover[2], C.hover[3], 1)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		GameTooltip:SetItemByID(self.itemID)
+		local itemID, info = ns.ResolveItem(self.itemID)
+		if itemID then
+			GameTooltip:SetItemByID(itemID)
+		else
+			GameTooltip:SetText(tostring(self.itemID))
+			if info then
+				GameTooltip:AddLine(L["Item level"] .. " " .. tostring(info.ilvl or "?") .. "  ·  " .. (info.slot or "") .. (info.type and info.type ~= "" and (" (" .. info.type .. ")") or ""), 1, 1, 1)
+			end
+			GameTooltip:AddLine(L["New in WoW Forever: details appear once the item has been seen in game."], 0.6, 0.6, 0.6, true)
+		end
 		GameTooltip:AddLine(" ")
 		GameTooltip:AddLine(L["Shift-click: link in chat  |  Ctrl-click: try on  |  Alt-click: wishlist"], 0.6, 0.6, 0.6, true)
 		GameTooltip:Show()
@@ -233,7 +266,7 @@ local itemRows = UI.Pool(function(parent)
 		GameTooltip_Hide()
 	end)
 	row:SetScript("OnClick", function(self)
-		local _, link = C_Item.GetItemInfo(self.itemID)
+		local _, link = C_Item.GetItemInfo(ns.ResolveItem(self.itemID) or self.itemID)
 		if IsAltKeyDown() then
 			local wl = ns.FC:GetModule("DungeonGuide"):Global().wishlist
 			wl[self.itemID] = not wl[self.itemID] or nil
@@ -246,9 +279,14 @@ local itemRows = UI.Pool(function(parent)
 		end
 	end)
 	function row:Refresh()
-		local itemID = self.itemID
+		local itemID, finfo = ns.ResolveItem(self.itemID)
+		itemID = itemID or self.itemID
 		local name, _, quality, _, _, itemType, subType, _, equipLoc, icon = C_Item.GetItemInfo(itemID)
-		if not icon and C_Item.GetItemInfoInstant then
+		if not name and finfo then
+			name, quality, itemType, subType = finfo.name, finfo.quality, finfo.slot, finfo.type
+			if type(itemID) == "string" then self.icon:SetItem(nil, quality) end
+		end
+		if not icon and type(itemID) == "number" and C_Item.GetItemInfoInstant then
 			local _, t, st, el, ic = C_Item.GetItemInfoInstant(itemID)
 			itemType, subType, equipLoc, icon = t, st, el, ic
 		end
@@ -286,7 +324,7 @@ local itemRows = UI.Pool(function(parent)
 		if item.measured and item.kills and item.kills > 0 and item.rate then
 			self.extra = (extra and extra .. "  ·  " or "") .. string.format("%s %.1f%% (%d %s)", L["measured:"], item.measured, item.kills, L["kills"])
 		end
-		if not self:Refresh() then
+		if not self:Refresh() and type(self.itemID) == "number" then
 			if C_Item.RequestLoadItemDataByID then C_Item.RequestLoadItemDataByID(self.itemID) end
 			ns.FC:GetModule("DungeonGuide").pending = true
 		end
@@ -377,7 +415,14 @@ local questBlocks = UI.Pool(function(parent)
 	f.giverButton:SetPoint("TOPRIGHT", -14, -46)
 	f.turninButton = UI.Button(f, L["Way to the turn-in"], 170, 26, "normal")
 	local function Way(button, npc, title)
-		if npc and npc[5] ~= 1 and not npc[6] then
+		if npc and npc[8] then
+			button:SetScript("OnClick", function()
+				ns.SetWaypoint(npc[8][1], npc[8][2], npc[8][3], npc[1] .. " - " .. title, "guide")
+				ns.Print(string.format(L["The arrow now points to %s (%s)."], npc[1], ns.MapName(npc[8][1])))
+				PlaySound(SOUNDKIT.MAP_PING or 3175)
+			end)
+			button:Show()
+		elseif npc and npc[2] and npc[5] ~= 1 and not npc[6] then
 			button:SetScript("OnClick", function()
 				ns.SetWorldWaypoint(npc[2], npc[3], npc[4], npc[1] .. " - " .. title, "guide")
 				ns.Print(string.format(L["The arrow now points to %s (%s)."], npc[1], Place(npc[2], npc[3], npc[4])))
@@ -572,7 +617,7 @@ function Guide:SetHero(opts)
 			chip:Hide()
 		end
 	end
-	local where = opts.way and opts.way.id and ns.Instances[opts.way.id]
+	local where = opts.way and (opts.way.where or (opts.way.id and ns.Instances[opts.way.id]))
 	hero.go:SetShown(where ~= nil)
 	if where then
 		hero.go:SetScript("OnClick", function()
@@ -866,10 +911,10 @@ function Guide:PageInstance(key, entry)
 	if entry.size then chips[#chips + 1] = { string.format(L["%d players"], entry.size), C.text } end
 	if entry.enter and entry.kind ~= "world" then chips[#chips + 1] = { string.format(L["Entry from level %d"], entry.enter), C.muted } end
 	if entry.isNew then chips[#chips + 1] = { L["New in Forever"], C.accent } end
-	local where = entry.id and ns.Instances[entry.id]
+	local where = entry.where or (entry.id and ns.Instances[entry.id])
 	self:SetHero({
 		title = EntryName(entry),
-		sub = where and ns.MapName(where.zone) or (entry.kind == "world" and L["Outdoors"] or ""),
+		sub = where and ns.MapName(where.zone) or entry.zoneMap and ns.MapName(entry.zoneMap) or (entry.kind == "world" and L["Outdoors"] or ""),
 		badge = entry.kind == "raid" and "Interface\\Icons\\INV_Misc_Head_Dragon_01" or entry.kind == "world" and "Interface\\Icons\\INV_Misc_Head_Dragon_Green" or "Interface\\Icons\\INV_Misc_Bone_HumanSkull_01",
 		chips = chips,
 		way = entry,
@@ -961,7 +1006,7 @@ function Guide:PageTrash(key, entry)
 		return not quality or quality >= minQuality
 	end
 	for _, mob in ipairs(mobs) do
-		self:AddSection(mob.name .. "   " .. UI.Colorize(MobLine(mob), C.muted))
+		self:AddSection((mob.name == "Trash mobs" and L["Trash mobs"] or mob.name) .. "   " .. UI.Colorize(MobLine(mob), C.muted))
 		if self:AddItems(self:LootList(entry, mob), filter) == 0 then
 			self:AddText(L["Nothing above the chosen quality."], 12, C.muted)
 		end

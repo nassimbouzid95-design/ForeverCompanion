@@ -657,3 +657,11 @@ L["Drop totems only for long or group fights; they cost a lot of mana."] = "Colo
 L["Use the slowest, strongest two-handed weapon you can find."] = "Usa el arma de dos manos más lenta y fuerte que encuentres."
 L["Finish enemies with your wand to save mana."] = "Remata a los enemigos con tu varita para ahorrar maná."
 L["Keep a weapon imbue on your weapon: Rockbiter early, Windfury from level 30."] = "Mantén un imbuido de arma activo: Arma Muerdepiedras al principio, Arma Viento Furioso desde el nivel 30."
+
+-- v2.3 gear
+L["Trash mobs"] = "Enemigos comunes"
+L["New"] = "Nuevo"
+L["New in WoW Forever."] = "Novedad de WoW Forever."
+L["Its stats are not published yet: ranked from its item level and type."] = "Sus estadísticas aún no se han publicado: clasificado por su nivel de objeto y su tipo."
+L["New in WoW Forever: details appear once the item has been seen in game."] = "Novedad de WoW Forever: los detalles aparecen cuando el objeto se ha visto en el juego."
+L["The 5 best items for each slot that you can get by this level, best first, with where to get them: quests, dungeon drops (new WoW Forever dungeons included), vendors and crafting. Rings and trinkets: wear the first two. Click an item with a quest or a vendor to point the arrow there. Shift-click: link in chat, Ctrl-click: try on."] = "Los 5 mejores objetos de cada ranura que puedes conseguir a este nivel, del mejor al peor, con dónde obtenerlos: misiones, botín de mazmorra (nuevas mazmorras de WoW Forever incluidas), vendedores y profesiones. Anillos y abalorios: equípate los dos primeros. Haz clic en un objeto con misión o vendedor para apuntar la flecha allí. Mayús-clic: enlace en el chat, Ctrl-clic: probar."

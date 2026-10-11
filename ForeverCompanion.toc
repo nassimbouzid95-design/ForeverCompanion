@@ -33,6 +33,7 @@ Data\Instances.lua
 Data\Zones.lua
 Data\InstanceDB.lua
 Data\DungeonQuests.lua
+Data\ForeverDungeons.lua
 Data\QuestDB.lua
 Data\Routes.lua
 Data\RoutesAuto.lua

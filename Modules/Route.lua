@@ -234,9 +234,9 @@ function Assistant:SuggestedDungeons()
 	local continent, px, py = ns.PlayerWorldPosition()
 	local list, seen = {}, {}
 	for _, entry in ipairs(ns.InstanceDB or {}) do
-		local where = entry.id and ns.Instances[entry.id]
-		if entry.kind == "dungeon" and level >= entry.min - 2 and level <= entry.max - 2 and where and not seen[entry.id] then
-			seen[entry.id] = true
+		local where = entry.where or (entry.id and ns.Instances[entry.id])
+		if entry.kind == "dungeon" and level >= entry.min - 2 and level <= entry.max - 2 and where and not seen[entry.id or entry.key] then
+			seen[entry.id or entry.key] = true
 			local cont, wx, wy = ns.MapToWorld(where.zone, where.x, where.y)
 			local dist = (cont and continent) and Nearest(continent, px, py, cont, wx, wy) or 1e6
 			list[#list + 1] = { entry = entry, where = where, dist = dist }

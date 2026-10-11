@@ -24,8 +24,8 @@ local SLOTS = {
 	{ "head", 1, "HEADSLOT", "Head" }, { "neck", 2, "NECKSLOT", "Neck" }, { "shoulder", 3, "SHOULDERSLOT", "Shoulder" },
 	{ "back", 15, "BACKSLOT", "Back" }, { "chest", 5, "CHESTSLOT", "Chest" }, { "wrist", 9, "WRISTSLOT", "Wrist" },
 	{ "hands", 10, "HANDSSLOT", "Hands" }, { "waist", 6, "WAISTSLOT", "Waist" }, { "legs", 7, "LEGSSLOT", "Legs" },
-	{ "feet", 8, "FEETSLOT", "Feet" }, { "finger1", 11, "FINGER0SLOT", "Finger" }, { "finger2", 12, "FINGER1SLOT", "Finger" },
-	{ "trinket1", 13, "TRINKET0SLOT", "Trinket" }, { "trinket2", 14, "TRINKET1SLOT", "Trinket" },
+	{ "feet", 8, "FEETSLOT", "Feet" }, { "finger", 11, "FINGER0SLOT", "Finger", 12 },
+	{ "trinket", 13, "TRINKET0SLOT", "Trinket", 14 },
 	{ "mainhand", 16, "MAINHANDSLOT", "Main Hand" }, { "offhand", 17, "SECONDARYHANDSLOT", "Off Hand" },
 	{ "ranged", 18, "RANGEDSLOT", "Ranged" },
 }
@@ -162,9 +162,11 @@ local rows = UI.Pool(function(parent)
 	row.value:SetWidth(176)
 	row:SetScript("OnEnter", function(self)
 		self.bg:SetVertexColor(C.hover[1], C.hover[2], C.hover[3], 1)
-		if self.itemID or self.spellID then
+		if self.itemID or self.spellID or self.tipTitle then
 			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-			if self.itemID then GameTooltip:SetItemByID(self.itemID) else GameTooltip:SetSpellByID(self.spellID) end
+			if self.itemID then GameTooltip:SetItemByID(self.itemID)
+			elseif self.spellID then GameTooltip:SetSpellByID(self.spellID)
+			else GameTooltip:SetText(self.tipTitle) end
 			if self.hint then
 				GameTooltip:AddLine(" ")
 				GameTooltip:AddLine(self.hint, 0.6, 0.6, 0.6, true)
@@ -177,7 +179,7 @@ local rows = UI.Pool(function(parent)
 		GameTooltip_Hide()
 	end)
 	function row:Set(opts)
-		self.itemID, self.spellID, self.hint = opts.itemID, opts.spellID, opts.hint
+		self.itemID, self.spellID, self.hint, self.tipTitle = opts.itemID, opts.spellID, opts.hint, opts.tipTitle
 		self.icon:SetItem(opts.icon, opts.quality)
 		self.title:SetText(opts.title or "")
 		self.info:SetText(opts.info or "")
@@ -337,8 +339,26 @@ function Guide:PageRoute()
 	end
 end
 
-local function SourceText(itemID)
-	local src = ns.GearSources and ns.GearSources[itemID]
+-- An entry of the gear lists is an itemID, or the name of a new WoW Forever item whose ID was not
+-- published (details in ns.GearItems).  Such an item is found by name once the game has seen it.
+local function ItemRef(key)
+	local info = ns.GearItems and ns.GearItems[key]
+	if type(key) == "number" then return key, info end
+	if info and info.id then return info.id, info end
+	if not ns.ResolveItem then return nil, info end
+	local id, finfo = ns.ResolveItem(key)
+	return id, info or finfo
+end
+
+local function InstanceTitle(key)
+	for _, e in ipairs(ns.InstanceDB or {}) do
+		if e.key == key then return ns.InstanceEntryName and ns.InstanceEntryName(e) or e.name or key, e end
+	end
+	return key
+end
+
+local function SourceText(key)
+	local src = ns.GearSources and ns.GearSources[key]
 	if not src then return nil end
 	-- some items come from a different quest for the Horde
 	if src.h and UnitFactionGroup("player") == "Horde" then src = src.h end
@@ -349,18 +369,79 @@ local function SourceText(itemID)
 		if not title or ns.IsSecret(title) then title = q and q[7] or ("#" .. src[2]) end
 		local where = q and ns.WorldPlace and ns.WorldPlace(q[8], q[9], q[10])
 		return L["Quest:"] .. " " .. title .. (where and ("  ·  " .. where) or ""), q and { q[8], q[9], q[10], title }
+	elseif kind == "fquest" then
+		-- quest of a new WoW Forever dungeon: { "fquest", title, instanceKey, level, giver, questID }
+		local title = src[6] and C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(src[6])
+		if not title or ns.IsSecret(title) then title = src[2] end
+		local text = L["Quest:"] .. " " .. title .. " (" .. string.format(L["Level %d"], src[4] or 0) .. ")  ·  " .. InstanceTitle(src[3])
+		if src[5] then text = text .. "  ·  " .. src[5] end
+		local q = src[6] and ns.DungeonQuestInfo and ns.DungeonQuestInfo[src[6]]
+		local at = q and q.giver and q.giver[8]
+		if at then
+			text = text .. "  ·  " .. ns.MapName(at[1])
+			return text, { map = at[1], x = at[2], y = at[3], title = (q.giver[1] or "") .. " - " .. title }
+		end
+		return text
 	elseif kind == "drop" then
-		local entry
-		for _, e in ipairs(ns.InstanceDB or {}) do if e.key == src[2] then entry = e break end end
-		local name = entry and ns.InstanceEntryName and ns.InstanceEntryName(entry) or src[2]
+		local name = InstanceTitle(src[2])
 		local rate = src[4] and src[4] > 0 and string.format(" (%.1f%%)", src[4]) or ""
-		return L["Drop:"] .. " " .. (src[3] or "?") .. " - " .. name .. rate
+		local boss = src[3] == "Trash" and L["Trash mobs"] or src[3] or "?"
+		return L["Drop:"] .. " " .. boss .. " - " .. name .. rate
 	elseif kind == "vendor" then
 		local where = src[3] and ns.WorldPlace and ns.WorldPlace(src[3], src[4], src[5])
 		return L["Vendor:"] .. " " .. (src[2] or "?") .. (where and ("  ·  " .. where) or ""), src[3] and { src[3], src[4], src[5], src[2] }
 	elseif kind == "crafted" then
 		return L["Crafted:"] .. " " .. (L[src[2]] or src[2] or "?")
 	end
+end
+
+function Guide:GearRow(key, rank, slot)
+	local itemID, info = ItemRef(key)
+	local name, link, quality, icon
+	if itemID then
+		name, link, quality, _, _, _, _, _, _, icon = C_Item.GetItemInfo(itemID)
+		if not icon and C_Item.GetItemInfoInstant then icon = select(5, C_Item.GetItemInfoInstant(itemID)) end
+		if not name and C_Item.RequestLoadItemDataByID then C_Item.RequestLoadItemDataByID(itemID) self.pending = true end
+	end
+	if not name and info then name, quality = info.name, info.quality end
+	local color = quality and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality]
+	local source, target = SourceText(key)
+	local src = ns.GearSources and ns.GearSources[key]
+	local equipped = itemID and GetInventoryItemID and (GetInventoryItemID("player", slot[2]) == itemID or (slot[5] and GetInventoryItemID("player", slot[5]) == itemID))
+	-- rings and trinkets: the first two are the ones to wear
+	local best = rank == 1 or (slot[5] and rank == 2)
+	local hints = {}
+	if target then hints[#hints + 1] = L["Click: point the arrow there"] end
+	if src and src.new then hints[#hints + 1] = L["New in WoW Forever."] end
+	if info and info.est then hints[#hints + 1] = L["Its stats are not published yet: ranked from its item level and type."] end
+	if info and not itemID then hints[#hints + 1] = L["Item level"] .. " " .. tostring(info.ilvl or "?") .. "  ·  " .. (info.slot or "") .. (info.type and info.type ~= "" and (" (" .. info.type .. ")") or "") end
+	local title = name and (color and color.hex and (color.hex .. name .. "|r") or name) or UI.Colorize(L["Item"] .. " #" .. tostring(key), C.muted)
+	if src and src.new then title = title .. "  " .. UI.Colorize(L["New"], C.accent) end
+	self:Row({
+		itemID = itemID,
+		tipTitle = not itemID and name or nil,
+		icon = icon, quality = quality,
+		title = title,
+		info = source or "",
+		value = (equipped and UI.Colorize(L["Equipped"], C.good) .. "  " or "") .. UI.Colorize("#" .. rank, best and C.gold or C.muted),
+		marked = equipped or best,
+		markColor = equipped and C.good or C.accent,
+		hint = #hints > 0 and table.concat(hints, "\n") or nil,
+		onClick = function()
+			if IsShiftKeyDown() and link then
+				local insert = ChatEdit_InsertLink or (ChatFrameUtil and ChatFrameUtil.InsertLink)
+				if insert then insert(link) end
+			elseif IsControlKeyDown() and link then
+				DressUpItemLink(link)
+			elseif target and target.map then
+				ns.SetWaypoint(target.map, target.x, target.y, target.title, "guide")
+				PlaySound(SOUNDKIT.MAP_PING or 3175)
+			elseif target then
+				ns.SetWorldWaypoint(target[1], target[2], target[3], target[4], "guide")
+				PlaySound(SOUNDKIT.MAP_PING or 3175)
+			end
+		end,
+	}, 2)
 end
 
 function Guide:PageGear()
@@ -375,38 +456,13 @@ function Guide:PageGear()
 		self:Text(L["No gear list for your class yet."], 13, C.muted, 6)
 		return
 	end
-	self:Text(L["The best item for each slot that you can get by this level: quest rewards first, then dungeon drops. Click an item with a quest or a vendor to point the arrow there. Shift-click: link in chat, Ctrl-click: try on."], 12, C.muted, 2)
-	self.stack:Space(6)
+	self:Text(L["The 5 best items for each slot that you can get by this level, best first, with where to get them: quests, dungeon drops (new WoW Forever dungeons included), vendors and crafting. Rings and trinkets: wear the first two. Click an item with a quest or a vendor to point the arrow there. Shift-click: link in chat, Ctrl-click: try on."], 12, C.muted, 2)
 	for _, slot in ipairs(SLOTS) do
-		local itemID = set[slot[1]]
-		if itemID then
-			local name, link, quality, _, _, _, _, _, _, icon = C_Item.GetItemInfo(itemID)
-			if not icon and C_Item.GetItemInfoInstant then icon = select(5, C_Item.GetItemInfoInstant(itemID)) end
-			if not name and C_Item.RequestLoadItemDataByID then C_Item.RequestLoadItemDataByID(itemID) self.pending = true end
-			local color = quality and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality]
-			local source, target = SourceText(itemID)
-			local equipped = GetInventoryItemID and GetInventoryItemID("player", slot[2]) == itemID
-			self:Row({
-				itemID = itemID,
-				icon = icon, quality = quality,
-				title = name and (color and color.hex and (color.hex .. name .. "|r") or name) or UI.Colorize(L["Item"] .. " #" .. itemID, C.muted),
-				info = source or "",
-				value = (equipped and UI.Colorize(L["Equipped"], C.good) .. "  " or "") .. UI.Colorize(_G[slot[3]] or L[slot[4]], C.muted),
-				marked = equipped,
-				markColor = C.good,
-				hint = target and L["Click: point the arrow there"] or nil,
-				onClick = function()
-					if IsShiftKeyDown() and link then
-						local insert = ChatEdit_InsertLink or (ChatFrameUtil and ChatFrameUtil.InsertLink)
-						if insert then insert(link) end
-					elseif IsControlKeyDown() and link then
-						DressUpItemLink(link)
-					elseif target then
-						ns.SetWorldWaypoint(target[1], target[2], target[3], target[4], "guide")
-						PlaySound(SOUNDKIT.MAP_PING or 3175)
-					end
-				end,
-			})
+		local list = set[slot[1]]
+		if type(list) ~= "table" then list = { list } end
+		if list[1] then
+			self:Text(UI.Colorize(_G[slot[3]] or L[slot[4]], C.gold), 13, C.text, 10)
+			for rank, key in ipairs(list) do self:GearRow(key, rank, slot) end
 		end
 	end
 end

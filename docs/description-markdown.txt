@@ -17,7 +17,7 @@ WoW Forever uses the Midnight addon rules: no addon can read combat. ForeverComp
 - **Map**: icons on the world map for dungeon and raid entrances, quests to pick up and turn in, quest objectives, notes and camps. Coordinates on the world map and minimap.
 - **Interface**: info bar (gold, bags, durability, latency, FPS), richer tooltips, clickable web links in chat.
 - **Safety**: death log, durability and full-bag warnings, rare and dangerous elite alerts.
-- **Leveling guide** (`/fc lvl`): a step-by-step route from 1 to 60 picked from your race, the best gear every 5 levels for your class and faction with where to get it, leveling talents, the spells you learn and when, and the rotation for your level.
+- **Leveling guide** (`/fc lvl`): a step-by-step route from 1 to 60 picked from your race, the 5 best items per slot every 5 levels for your class and faction (new Forever dungeons included) with where to get each, leveling talents, the spells you learn and when, and the rotation for your level.
 - **Economy**: auction house prices (scan and prices seen while browsing), 14-day average, crafting cost and profit in tooltips, a gold ledger by source (loot, quests, vendor, auction house...), a shopping list and a 30-day gold chart (`/fc eco`).
 - **PvP**: battleground results, honor and kills per session and per battleground, win rate (`/fc pvp`).
 - **Hardcore**: warnings for zones and targets too dangerous for your level, enemy territory, a survival panel (deaths, potions, bandages, food, hearthstone, durability), a pre-pull checklist and your death history (`/fc hc`).
