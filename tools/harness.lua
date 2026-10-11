@@ -300,6 +300,7 @@ if ok then
 		local entry = Guide.list[key]
 		paths[#paths + 1] = key
 		paths[#paths + 1] = key .. ">trash"
+		paths[#paths + 1] = key .. ">quests"
 		for i in ipairs(Guide:Bosses(entry)) do paths[#paths + 1] = key .. ">b" .. i end
 	end
 	for _, p in ipairs(paths) do
@@ -307,6 +308,15 @@ if ok then
 		local ok2, err2 = pcall(Guide.Open, Guide, p)
 		if not ok2 then fails = fails + 1 print("page FAIL", p, err2) end
 	end
+	local nq, nqa = 0, 0
+	for _, key in ipairs(Guide.order) do nq = nq + #Guide:Quests(Guide.list[key]) nqa = nqa + #Guide:Quests(Guide.list[key], true) end
+	print("guide quests mine/all", nq, nqa)
+	Guide:Settings().allQuests = true
+	for _, key in ipairs(Guide.order) do
+		local ok3, err3 = pcall(Guide.Open, Guide, key .. ">quests")
+		if not ok3 then fails = fails + 1 print("page FAIL all", key, err3) end
+	end
+	Guide:Settings().allQuests = false
 	print("guide pages", pages, "fails", fails, "nav rows height", Guide.nav.child:GetHeight())
 	Guide.search:SetText("vancleef")
 	Guide.filter = "vancleef"

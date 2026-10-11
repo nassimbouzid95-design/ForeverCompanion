@@ -11,6 +11,7 @@ local Guide = ns.NewModule("DungeonGuide", {
 	minTrashQuality = 2, -- uncommon and better
 	wishlistAlert = true,
 	showModels = true,
+	allQuests = false, -- also list the quests of the other faction, races and classes
 }, {
 	wishlist = {}, -- [itemID] = true
 	window = {},   -- position and size
@@ -113,6 +114,75 @@ function Guide:TrashMobs(entry)
 	return mobs
 end
 
+---------------------------------------------------------------------------
+-- Dungeon quests (Data\DungeonQuests.lua)
+---------------------------------------------------------------------------
+local function HasBit(mask, bitValue)
+	return mask % (bitValue + bitValue) >= bitValue
+end
+
+-- Quests of an instance this character can do (every quest when all is true).
+function Guide:Quests(entry, all)
+	local ids = entry.key and ns.DungeonQuests and ns.DungeonQuests[entry.key]
+	if not ids then return {} end
+	local faction = UnitFactionGroup("player")
+	local side = faction == "Alliance" and 1 or faction == "Horde" and 2 or 0
+	local _, _, raceID = UnitRace("player")
+	local _, _, classID = UnitClass("player")
+	local raceBit = raceID and raceID >= 1 and raceID <= 8 and 2 ^ (raceID - 1) or nil
+	local classBit = classID and 2 ^ (classID - 1)
+	local out = {}
+	for _, id in ipairs(ids) do
+		local q = ns.DungeonQuestInfo[id]
+		if q and (all or ((q[4] == 0 or side == 0 or q[4] == side)
+			and (q[5] == 0 or not raceBit or HasBit(q[5], raceBit))
+			and (q[6] == 0 or not classBit or HasBit(q[6], classBit)))) then
+			out[#out + 1] = id
+		end
+	end
+	return out
+end
+
+local function QuestTitle(id)
+	local title = C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(id)
+	if type(title) == "string" and title ~= "" and not ns.IsSecret(title) then return title end
+	local q = ns.DungeonQuestInfo[id]
+	return q and q[1] or (ns.DungeonQuestPrev and ns.DungeonQuestPrev[id]) or ("#" .. id)
+end
+
+local function QuestDone(id)
+	return C_QuestLog.IsQuestFlaggedCompleted and C_QuestLog.IsQuestFlaggedCompleted(id) or false
+end
+
+local function QuestInLog(id)
+	local index = C_QuestLog.GetLogIndexForQuestID and C_QuestLog.GetLogIndexForQuestID(id)
+	return index ~= nil and index ~= 0
+end
+
+-- "Zone (x, y)" for a world position.
+local CONTINENT_MAPS = { [0] = 1415, [1] = 1414 }
+local function Place(continent, x, y)
+	local contMap = CONTINENT_MAPS[continent]
+	local mx, my = ns.WorldToMap(continent, x, y, contMap)
+	if mx and C_Map.GetMapInfoAtPosition then
+		local ok, info = pcall(C_Map.GetMapInfoAtPosition, contMap, mx, my)
+		if ok and info and info.mapID and info.mapID ~= contMap then
+			local zx, zy = ns.WorldToMap(continent, x, y, info.mapID)
+			if zx then return string.format("%s (%.0f, %.0f)", info.name or "?", zx * 100, zy * 100) end
+			return info.name
+		end
+	end
+	return L[ns.CONTINENT_NAMES[continent] or "?"] or "?"
+end
+
+-- One line for a quest giver or turn-in: { name, continent, x, y, inside, itemID }.
+local function NpcLine(npc)
+	if not npc then return UI.Colorize("?", C.muted) end
+	if npc[6] then return string.format(L["Starts from an item: %s"], UI.Colorize(npc[1], C.gold)) end
+	if npc[5] == 1 then return UI.Colorize(npc[1], C.gold) .. "  ·  " .. L["inside the instance"] end
+	return UI.Colorize(npc[1], C.gold) .. "  ·  " .. Place(npc[2], npc[3], npc[4])
+end
+
 local function ItemCount(entry)
 	local n = 0
 	for _, boss in ipairs(entry.bosses or {}) do n = n + (boss.loot and #boss.loot / 2 or 0) end
@@ -212,7 +282,10 @@ local itemRows = UI.Pool(function(parent)
 	function row:SetData(item, extra)
 		self.itemID, self.extra = item.itemID, extra
 		local rate = item.rate or item.measured
-		if rate then
+		if item.count then
+			self.rate:SetText(item.count > 1 and ("x" .. item.count) or "")
+			self.bar:Hide() self.barBg:Hide()
+		elseif rate then
 			local text, color = Percent(rate)
 			self.rate:SetText(text)
 			self.bar:SetVertexColor(color[1], color[2], color[3], 1)
@@ -292,6 +365,99 @@ local cards = UI.Pool(function(parent)
 	return card
 end)
 
+-- Quest card: status, title, level, giver, turn-in, prerequisite, objectives and arrow buttons.
+local questBlocks = UI.Pool(function(parent)
+	local f = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+	UI.Backdrop(f, C.panel, C.border)
+	f.stripe = UI.Fill(f, C.accent, "ARTWORK")
+	f.stripe:SetPoint("TOPLEFT", 1, -1)
+	f.stripe:SetPoint("BOTTOMLEFT", 1, 1)
+	f.stripe:SetWidth(3)
+	f.status = f:CreateTexture(nil, "OVERLAY")
+	f.status:SetSize(22, 22)
+	f.status:SetPoint("TOPLEFT", 14, -12)
+	f.title = UI.Text(f, 16, C.gold)
+	f.title:SetPoint("LEFT", f.status, "RIGHT", 8, 0)
+	f.title:SetPoint("RIGHT", f, "RIGHT", -200, 0)
+	f.title:SetWordWrap(false)
+	f.chips = { UI.Chip(f, 12), UI.Chip(f, 12) }
+	f.body = UI.Text(f, 13, C.text)
+	f.body:SetPoint("TOPLEFT", 16, -44)
+	f.body:SetPoint("RIGHT", f, "RIGHT", -200, 0)
+	f.body:SetSpacing(4)
+	f.giverButton = UI.Button(f, L["Way to the giver"], 170, 26, "accent")
+	f.giverButton:SetPoint("TOPRIGHT", -14, -46)
+	f.turninButton = UI.Button(f, L["Way to the turn-in"], 170, 26, "normal")
+	local function Way(button, npc, title)
+		if npc and npc[5] ~= 1 and not npc[6] then
+			button:SetScript("OnClick", function()
+				ns.SetWorldWaypoint(npc[2], npc[3], npc[4], npc[1] .. " - " .. title, "guide")
+				ns.Print(string.format(L["The arrow now points to %s (%s)."], npc[1], Place(npc[2], npc[3], npc[4])))
+				PlaySound(SOUNDKIT.MAP_PING or 3175)
+			end)
+			button:Show()
+		else
+			button:Hide()
+		end
+	end
+	function f:Set(id, q)
+		local title = QuestTitle(id)
+		local done, inLog = QuestDone(id), QuestInLog(id)
+		if done then
+			self.status:SetTexture("Interface\\RaidFrame\\ReadyCheck-Ready")
+		elseif inLog then
+			self.status:SetTexture("Interface\\GossipFrame\\ActiveQuestIcon")
+		else
+			self.status:SetTexture("Interface\\GossipFrame\\AvailableQuestIcon")
+		end
+		local color = done and C.muted or UI.LevelColor(q[2], q[2])
+		self.title:SetText(title)
+		self.title:SetTextColor(color[1], color[2], color[3])
+		self.stripe:SetVertexColor(color[1], color[2], color[3], 1)
+		self.chips[1]:Set(string.format(L["Level %d (from %d)"], q[2], q[3]), color)
+		self.chips[1]:ClearAllPoints()
+		self.chips[1]:SetPoint("TOPRIGHT", -14, -12)
+		local sideText = q[4] == 1 and L["Alliance"] or q[4] == 2 and L["Horde"] or nil
+		if done or inLog or sideText then
+			self.chips[2]:Set(done and L["Done"] or inLog and L["In your quest log"] or sideText,
+				done and C.good or inLog and C.warn or (q[4] == 1 and { 0.35, 0.6, 1 } or { 1, 0.35, 0.3 }))
+			self.chips[2]:ClearAllPoints()
+			self.chips[2]:SetPoint("RIGHT", self.chips[1], "LEFT", -6, 0)
+			self.chips[2]:Show()
+		else
+			self.chips[2]:Hide()
+		end
+		local lines = {}
+		local function Add(label, text) lines[#lines + 1] = UI.Colorize(label, C.muted) .. "  " .. text end
+		Add(L["Giver:"], NpcLine(q.giver))
+		if q.turnin then Add(L["Turn in:"], NpcLine(q.turnin)) end
+		if q[7] and q[7] > 0 then
+			Add(L["Requires:"], QuestTitle(q[7]) .. (QuestDone(q[7]) and UI.Colorize("  (" .. L["Done"] .. ")", C.good) or ""))
+		end
+		if q.group then Add(L["Group:"], string.format(L["%d players"], q.group)) end
+		if q.kills then
+			local kills = {}
+			for i = 1, #q.kills, 2 do kills[#kills + 1] = q.kills[i + 1] > 1 and (q.kills[i] .. " x" .. q.kills[i + 1]) or q.kills[i] end
+			Add(L["Kill:"], table.concat(kills, ", "))
+		end
+		if q.objectives and q.objectives ~= "" then
+			lines[#lines + 1] = " "
+			lines[#lines + 1] = UI.Colorize(q.objectives, { 0.82, 0.84, 0.9 })
+		end
+		self.body:SetText(table.concat(lines, "\n"))
+		Way(self.giverButton, q.giver, title)
+		Way(self.turninButton, q.turnin, title)
+		self.turninButton:ClearAllPoints()
+		if self.giverButton:IsShown() then
+			self.turninButton:SetPoint("TOPRIGHT", self.giverButton, "BOTTOMRIGHT", 0, -6)
+		else
+			self.turninButton:SetPoint("TOPRIGHT", -14, -46)
+		end
+		self:SetHeight(math.max(118, 58 + self.body:GetStringHeight()))
+	end
+	return f
+end)
+
 ---------------------------------------------------------------------------
 -- Window
 ---------------------------------------------------------------------------
@@ -369,6 +535,16 @@ function Guide:CreateWindow()
 	hero.go:SetPoint("BOTTOMRIGHT", -14, 14)
 	self.hero = hero
 	hero:Hide()
+
+	-- "All quests / my quests" switch of the quest page.
+	local questToggle = UI.Button(main.child, "", 320, 28, "ghost")
+	questToggle:SetScript("OnClick", function()
+		self:Settings().allQuests = not self:Settings().allQuests
+		self:Render()
+		self:RenderNav()
+	end)
+	questToggle:Hide()
+	self.questToggle = questToggle
 
 	f:SetScript("OnShow", function() PlaySound(SOUNDKIT.IG_SPELLBOOK_OPEN or 829) end)
 	f:SetScript("OnHide", function() PlaySound(SOUNDKIT.IG_SPELLBOOK_CLOSE or 830) end)
@@ -555,6 +731,12 @@ function Guide:RenderNav()
 							local t = Row(14, 24, 12, C.muted)
 							t.text:SetText(L["Trash"])
 							Select(t, key .. ">trash")
+							local count = #self:Quests(entry, self:Settings().allQuests)
+							if count > 0 then
+								local q = Row(14, 24, 12, C.accent)
+								q.text:SetText(L["Quests"] .. UI.Colorize("  " .. count, C.muted))
+								Select(q, key .. ">quests")
+							end
 						end
 					end
 				end
@@ -579,6 +761,8 @@ function Guide:Clear()
 	textBlocks:ReleaseAll()
 	sections:ReleaseAll()
 	cards:ReleaseAll()
+	questBlocks:ReleaseAll()
+	self.questToggle:Hide()
 	self.hero:Hide()
 	self.stack:Reset()
 	self.stack:Space(18)
@@ -728,6 +912,17 @@ function Guide:PageInstance(key, entry)
 			onClick = function() self:Open(key .. ">trash") end,
 		}
 	end
+	local quests = self:Quests(entry, self:Settings().allQuests)
+	if #quests > 0 then
+		local done = 0
+		for _, id in ipairs(quests) do if QuestDone(id) then done = done + 1 end end
+		list[#list + 1] = {
+			title = L["Quests"],
+			sub = string.format(L["%d quests"], #quests) .. "  ·  " .. string.format(L["%d done"], done),
+			color = C.accent,
+			onClick = function() self:Open(key .. ">quests") end,
+		}
+	end
 	self:AddSection(L["Bosses"])
 	self:AddCards(list)
 	if entry.collected then
@@ -785,6 +980,56 @@ function Guide:PageTrash(key, entry)
 	end
 end
 
+function Guide:PageQuests(key, entry)
+	local all = self:Settings().allQuests
+	local ids = self:Quests(entry, all)
+	local done = 0
+	for _, id in ipairs(ids) do if QuestDone(id) then done = done + 1 end end
+	self:SetHero({
+		title = EntryName(entry) .. " · " .. L["Quests"],
+		sub = L["Quests that start or are done in this instance, with where to get them, what to do and the rewards."],
+		badge = "Interface\\Icons\\INV_Misc_Book_08",
+		chips = {
+			{ string.format(L["%d quests"], #ids), C.accent },
+			{ string.format(L["%d done"], done), C.good },
+			{ all and L["Every faction and class"] or L["For your character"], C.muted },
+		},
+		way = entry,
+		height = 140,
+	})
+	local toggle = self.questToggle
+	toggle.label:SetText(all and L["Show my quests only"] or L["Show every quest (other factions and classes)"])
+	toggle:Show()
+	self.stack:Add(toggle, 28, 14)
+	toggle:ClearAllPoints()
+	toggle:SetPoint("TOPLEFT", self.main.child, "TOPLEFT", self.stack.pad, -(self.stack.y - 28))
+	toggle:SetSize(340, 28)
+	if #ids == 0 then
+		self:AddText(L["No quest for your character in this instance."], 13, C.muted, 14)
+		return
+	end
+	for index, id in ipairs(ids) do
+		local q = ns.DungeonQuestInfo[id]
+		local block = questBlocks:Acquire(self.main.child)
+		self.stack:Add(block, 118, index == 1 and 16 or 26)
+		self.stack.y = self.stack.y - 118
+		block:Set(id, q)
+		self.stack.y = self.stack.y + block:GetHeight()
+		local function Rewards(label, list)
+			if not list then return end
+			self:AddText(label, 12, C.accent, 10)
+			for i = 1, #list, 2 do
+				local row = itemRows:Acquire(self.main.child)
+				self.stack:Add(row, 46, 4, 18)
+				row:SetData({ itemID = list[i], count = list[i + 1] })
+			end
+		end
+		if q.choice then Rewards(#q.choice > 2 and L["Choose one reward:"] or L["Reward:"], q.choice) end
+		Rewards(L["You also receive:"], q.reward)
+		if q.money then self:AddText(L["Money:"] .. "  " .. ns.FormatMoney(q.money), 12, C.text, 8) end
+	end
+end
+
 function Guide:PageWishlist()
 	local count = 0
 	for _ in pairs(self:Global().wishlist) do count = count + 1 end
@@ -805,7 +1050,7 @@ function Guide:PageWishlist()
 	if count == 0 then self:AddText(L["Nothing yet."], 13, C.muted) end
 end
 
--- path: "home", "wishlist", "k3", "k3>b2", "k3>trash"
+-- path: "home", "wishlist", "k3", "k3>b2", "k3>trash", "k3>quests"
 function Guide:Open(path)
 	self.path = path
 	local key = path:match("^([kc]%d+)")
@@ -823,6 +1068,8 @@ function Guide:Render()
 	local entry = key and self.list[key]
 	if path == "wishlist" then
 		self:PageWishlist()
+	elseif entry and sub == "quests" then
+		self:PageQuests(key, entry)
 	elseif entry and sub == "trash" then
 		self:PageTrash(key, entry)
 	elseif entry and sub:match("^b%d+$") then
@@ -908,6 +1155,7 @@ function Guide:GetOptions()
 			open = { type = "execute", order = 1, name = L["Open the guide"], func = function() self:Toggle() end },
 			wishlistAlert = { type = "toggle", order = 2, width = "full", name = L["Alert me when a wishlist item drops"] },
 			showModels = { type = "toggle", order = 3, width = "full", name = L["Show the 3D model of each boss"] },
+			allQuests = { type = "toggle", order = 3.5, width = "full", name = L["Show every quest (other factions and classes)"] },
 			minTrashQuality = {
 				type = "select", order = 4, name = L["Trash items shown from quality"],
 				values = { [0] = ITEM_QUALITY0_DESC, [1] = ITEM_QUALITY1_DESC, [2] = ITEM_QUALITY2_DESC, [3] = ITEM_QUALITY3_DESC, [4] = ITEM_QUALITY4_DESC },

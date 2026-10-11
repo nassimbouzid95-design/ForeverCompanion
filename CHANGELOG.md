@@ -1,5 +1,9 @@
 # ForeverCompanion
 
+## v2.1.0
+
+- Dungeon & raid guide: new Quests page for every dungeon and raid (547 quests). For each quest: who gives it and where (zone and coordinates), where to turn it in, the quest it requires, what to kill or bring, the group size, the reward choices with icons, the other rewards and the money. Buttons point the arrow at the quest giver or the turn-in. Quests already done are checked, quests in your log are marked. Shows the quests of your faction, race and class by default; one click shows them all.
+
 ## v2.0.0
 
 The final version: economy, PvP, hardcore and five new languages.
