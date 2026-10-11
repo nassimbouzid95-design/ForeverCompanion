@@ -19,6 +19,7 @@ WoW Forever uses the Midnight addon rules: no addon can read combat. ForeverComp
 - **Map**: icons on the world map for dungeon and raid entrances, quests to pick up and turn in, quest objectives, notes and camps. Coordinates on the world map and minimap.
 - **Interface**: info bar (gold, bags, durability, latency, FPS), richer tooltips, clickable web links in chat.
 - **Safety**: death log, durability and full-bag warnings, rare and dangerous elite alerts.
+- **Leveling guide** (`/fc lvl`): a step-by-step route from 1 to 60 picked from your race, the best gear every 5 levels for your class and faction with where to get it, leveling talents, the spells you learn and when, and the rotation for your level.
 - **Economy**: auction house prices (scan and prices seen while browsing), 14-day average, crafting cost and profit in tooltips, a gold ledger by source (loot, quests, vendor, auction house...), a shopping list and a 30-day gold chart (`/fc eco`).
 - **PvP**: battleground results, honor and kills per session and per battleground, win rate (`/fc pvp`).
 - **Hardcore**: warnings for zones and targets too dangerous for your level, enemy territory, a survival panel (deaths, potions, bandages, food, hearthstone, durability), a pre-pull checklist and your death history (`/fc hc`).
@@ -37,6 +38,7 @@ Every module can be turned off. Click the minimap button for the menu. Type `/fc
 - **Guide des donjons et raids** : tous les donjons et raids, chaque boss avec niveau, PV, butin et **taux de drop**, le butin du trash avec ses taux, et le chemin vers l'entrée. Liste de souhaits avec alerte.
 - **Rerolls et Legacy** : or, métiers, verrouillages et objets de tous tes personnages.
 - **Carte** avec les entrées de donjons, les quêtes et leurs objectifs. **Campements**, **sacs**, **interface** et **sécurité en monde ouvert**.
+- **Guide de leveling** : route étape par étape de 1 à 60 selon ta race, meilleur équipement tous les 5 niveaux, talents, sorts et rotation de ta classe.
 - **Économie** (prix de l'hôtel des ventes, coût et profit d'artisanat, registre d'or), **JcJ** (résultats des champs de bataille, honneur) et **Hardcore** (alertes de zones et cibles dangereuses, panneau de survie, historique des morts).
 
 Tape `/fc` pour les options et `/fc help` pour toutes les commandes.

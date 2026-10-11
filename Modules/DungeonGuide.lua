@@ -159,20 +159,8 @@ local function QuestInLog(id)
 	return index ~= nil and index ~= 0
 end
 
--- "Zone (x, y)" for a world position.
-local CONTINENT_MAPS = { [0] = 1415, [1] = 1414 }
 local function Place(continent, x, y)
-	local contMap = CONTINENT_MAPS[continent]
-	local mx, my = ns.WorldToMap(continent, x, y, contMap)
-	if mx and C_Map.GetMapInfoAtPosition then
-		local ok, info = pcall(C_Map.GetMapInfoAtPosition, contMap, mx, my)
-		if ok and info and info.mapID and info.mapID ~= contMap then
-			local zx, zy = ns.WorldToMap(continent, x, y, info.mapID)
-			if zx then return string.format("%s (%.0f, %.0f)", info.name or "?", zx * 100, zy * 100) end
-			return info.name
-		end
-	end
-	return L[ns.CONTINENT_NAMES[continent] or "?"] or "?"
+	return ns.WorldPlace(continent, x, y)
 end
 
 -- One line for a quest giver or turn-in: { name, continent, x, y, inside, itemID }.

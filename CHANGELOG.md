@@ -1,5 +1,16 @@
 # ForeverCompanion
 
+## v2.2.0
+
+New leveling guide in the spirit of RestedXP (`/fc lvl`, or the minimap menu).
+
+- Built-in leveling route from 1 to 60 for every starting area (Human, Dwarf and Gnome, Night Elf, Orc and Troll, Tauren, Undead), picked automatically from your race. About 600 quests each, in order: accept, do, turn in, travel to the next zone. The step window shows the next steps, moves on by itself when you accept, finish or turn in a quest, and the arrow points to each step. Right-click a step to skip it. The routes are computed from the quest database (levels, quest chains, distances, quest and kill experience), not written by hand: please report odd steps.
+- Best gear every 5 levels (10 to 60) for your class and faction, slot by slot, with where to get each item: quest (click to point the arrow at the quest giver), dungeon boss and drop rate, vendor or crafted.
+- Leveling talents: one point per level from 10 to 60 for the classic leveling build of your class (Arms, Retribution, Beast Mastery, Combat, Shadow, Enhancement, Frost, Affliction, Feral).
+- Spells learned while leveling, level by level, with their cost, what you already know and what to learn now.
+- Rotation for your class and level, with the next one when a key spell arrives, and tips.
+- When you level up, the chat lists your new spells and the talent to take.
+
 ## v2.1.0
 
 - Dungeon & raid guide: new Quests page for every dungeon and raid (547 quests). For each quest: who gives it and where (zone and coordinates), where to turn it in, the quest it requires, what to kill or bring, the group size, the reward choices with icons, the other rewards and the money. Buttons point the arrow at the quest giver or the turn-in. Quests already done are checked, quests in your log are marked. Shows the quests of your faction, race and class by default; one click shows them all.

@@ -14,6 +14,7 @@
 <li><strong>Map</strong>: icons on the world map for dungeon and raid entrances, quests to pick up and turn in, quest objectives, notes and camps. Coordinates on the world map and minimap.</li>
 <li><strong>Interface</strong>: info bar (gold, bags, durability, latency, FPS), richer tooltips, clickable web links in chat.</li>
 <li><strong>Safety</strong>: death log, durability and full-bag warnings, rare and dangerous elite alerts.</li>
+<li><strong>Leveling guide</strong> (<code>/fc lvl</code>): a step-by-step route from 1 to 60 picked from your race, the best gear every 5 levels for your class and faction with where to get it, leveling talents, the spells you learn and when, and the rotation for your level.</li>
 <li><strong>Economy</strong>: auction house prices (scan and prices seen while browsing), 14-day average, crafting cost and profit in tooltips, a gold ledger by source (loot, quests, vendor, auction house...), a shopping list and a 30-day gold chart (<code>/fc eco</code>).</li>
 <li><strong>PvP</strong>: battleground results, honor and kills per session and per battleground, win rate (<code>/fc pvp</code>).</li>
 <li><strong>Hardcore</strong>: warnings for zones and targets too dangerous for your level, enemy territory, a survival panel (deaths, potions, bandages, food, hearthstone, durability), a pre-pull checklist and your death history (<code>/fc hc</code>).</li>
@@ -29,6 +30,7 @@
 <li><strong>Guide des donjons et raids</strong> : tous les donjons et raids, chaque boss avec niveau, PV, butin et <strong>taux de drop</strong>, le butin du trash avec ses taux, et le chemin vers l'entrée. Liste de souhaits avec alerte.</li>
 <li><strong>Rerolls et Legacy</strong> : or, métiers, verrouillages et objets de tous tes personnages.</li>
 <li><strong>Carte</strong> avec les entrées de donjons, les quêtes et leurs objectifs. <strong>Campements</strong>, <strong>sacs</strong>, <strong>interface</strong> et <strong>sécurité en monde ouvert</strong>.</li>
+<li><strong>Guide de leveling</strong> : route étape par étape de 1 à 60 selon ta race, meilleur équipement tous les 5 niveaux, talents, sorts et rotation de ta classe.</li>
 <li><strong>Économie</strong> (prix de l'hôtel des ventes, coût et profit d'artisanat, registre d'or), <strong>JcJ</strong> (résultats des champs de bataille, honneur) et <strong>Hardcore</strong> (alertes de zones et cibles dangereuses, panneau de survie, historique des morts).</li>
 </ul>
 <p>Tape <code>/fc</code> pour les options et <code>/fc help</code> pour toutes les commandes.</p>

@@ -9,6 +9,7 @@ local ICON = "Interface\\AddOns\\ForeverCompanion\\Media\\Logo"
 ---------------------------------------------------------------------------
 local HUB_ENTRIES = {
 	{ label = "Dungeon & raid guide", desc = "Bosses, loot and drop rates", icon = "Interface\\Icons\\INV_Misc_Book_09", command = "guide" },
+	{ label = "Leveling guide", desc = "Route, best gear, talents, spells, rotation", icon = "Interface\\Icons\\INV_Misc_Book_11", command = "lvl", module = "ClassGuide" },
 	{ label = "Next quests", desc = "Quest assistant and XP route", icon = "Interface\\Icons\\INV_Misc_Map_01", run = function() if ns.ToggleRouteWindow then ns.ToggleRouteWindow() end end },
 	{ label = "Economy", desc = "Gold, auction prices, professions", icon = "Interface\\Icons\\INV_Misc_Coin_01", command = "eco", module = "Economy" },
 	{ label = "PvP", desc = "Battlegrounds and honor", icon = "Interface\\Icons\\INV_BannerPVP_02", command = "pvp", module = "PvP" },

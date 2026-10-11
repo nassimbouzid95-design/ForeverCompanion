@@ -13,6 +13,8 @@ local Route = ns.NewModule("Route", {
 	questLevelsBelow = 5,
 	questLevelsAbove = 2,
 	suggestDungeons = true,
+	autoRoutes = true, -- follow the built-in leveling routes (Data\RoutesAuto.lua)
+	stepsShown = 5,
 }, {
 	recorded = {}, -- [name] = route
 	imported = {}, -- list of routes pasted by the player
@@ -40,11 +42,30 @@ end
 
 local function QuestTitle(step)
 	local title = step.quest and C_QuestLog.GetTitleForQuestID(step.quest)
-	return title or step.name or (step.quest and ("#" .. step.quest)) or ""
+	if title and not ns.IsSecret(title) and title ~= "" then return title end
+	local q = step.quest and ns.QuestDB and ns.QuestDB[step.quest]
+	return step.name or (q and q[7]) or (step.quest and ("#" .. step.quest)) or ""
 end
 
 local function InLog(questID)
-	return C_QuestLog.GetLogIndexForQuestID(questID) ~= nil
+	local index = C_QuestLog.GetLogIndexForQuestID(questID)
+	return index ~= nil and index ~= 0
+end
+
+-- "Zone (x, y)" for a world position (continent 0 = Eastern Kingdoms, 1 = Kalimdor).
+local CONTINENT_MAPS = { [0] = 1415, [1] = 1414 }
+function ns.WorldPlace(continent, x, y)
+	local contMap = CONTINENT_MAPS[continent]
+	local mx, my = ns.WorldToMap(continent, x, y, contMap)
+	if mx and C_Map.GetMapInfoAtPosition then
+		local ok, info = pcall(C_Map.GetMapInfoAtPosition, contMap, mx, my)
+		if ok and info and info.mapID and info.mapID ~= contMap then
+			local zx, zy = ns.WorldToMap(continent, x, y, info.mapID)
+			if zx then return string.format("%s (%.0f, %.0f)", info.name or "?", zx * 100, zy * 100) end
+			return info.name
+		end
+	end
+	return L[ns.CONTINENT_NAMES[continent] or "?"] or "?"
 end
 
 local function TurnedIn(questID)
@@ -230,7 +251,13 @@ end
 ---------------------------------------------------------------------------
 function Route:AllRoutes()
 	local faction, race, class = PlayerInfo()
-	return ns.MatchingRoutes(faction, race, class, self:Settings().style, self:Global().imported)
+	local routes = ns.MatchingRoutes(faction, race, class, self:Settings().style, self:Global().imported)
+	if not self:Settings().autoRoutes then
+		for i = #routes, 1, -1 do
+			if routes[i].auto then table.remove(routes, i) end
+		end
+	end
+	return routes
 end
 
 function Route:FindRoute(id)
@@ -270,6 +297,12 @@ function Route:IsStepDone(route, index)
 		return TurnedIn(step.quest)
 	elseif kind == "level" then
 		return UnitLevel("player") >= step.level
+	elseif kind == "note" and step.abandon then
+		return not InLog(step.quest)
+	elseif kind == "goto" and step.wx then
+		-- also done once a later quest step of the route is done (you are already there)
+		local nextStep = route.steps[index + 1]
+		if nextStep and nextStep.quest and (InLog(nextStep.quest) or TurnedIn(nextStep.quest)) then return true end
 	end
 	return false
 end
@@ -332,7 +365,11 @@ function Route:UpdateWaypoint()
 		return
 	end
 	local step = self:CurrentStep()
-	if step and step.map and step.x and step.y and self:Settings().autoArrow then
+	if step and step.wx and self:Settings().autoArrow then
+		if not ns.SameWaypoint(step.cont, step.wx, step.wy) then
+			ns.SetWorldWaypoint(step.cont, step.wx, step.wy, self:StepText(step, true), OWNER)
+		end
+	elseif step and step.map and step.x and step.y and self:Settings().autoArrow then
 		ns.SetWaypoint(step.map, step.x, step.y, self:StepText(step, true), OWNER)
 	else
 		ns.ClearWaypoint(OWNER)
@@ -400,6 +437,13 @@ function Route:StepText(step, short)
 		body = string.format(L["Reach level %d"], step.level)
 	elseif kind == "dungeon" then
 		body = ns.InstanceName(step.instance)
+	elseif kind == "goto" and step.zone then
+		body = string.format(L["Travel to %s"], step.zone)
+		if step.ship and not short then
+			body = body .. "\n|cffbbbbbb" .. (UnitFactionGroup("player") == "Horde" and L["Take the zeppelin or the boat to the other continent."] or L["Take the boat to the other continent."]) .. "|r"
+		end
+	elseif kind == "note" and step.abandon then
+		body = string.format(L["Abandon: %s"], QuestTitle(step))
 	else
 		body = step.text or ""
 	end
@@ -416,7 +460,9 @@ function Route:StepText(step, short)
 			end
 		end
 	end
-	if step.map and step.x then
+	if step.wx then
+		text = text .. "\n|cff888888" .. ns.WorldPlace(step.cont, step.wx, step.wy) .. "|r"
+	elseif step.map and step.x then
 		text = text .. string.format("\n|cff888888%s %.1f, %.1f|r", ns.MapName(step.map), step.x * 100, step.y * 100)
 	end
 	return text
@@ -431,6 +477,11 @@ local TAG = {
 	accept = { L["Accept"], C.gold },
 	complete = { L["Do"], { 0.4, 0.8, 1 } },
 	turnin = { L["Turn in"], C.good },
+	["goto"] = { L["Go to"], C.text },
+	level = { L["Level"], { 1, 0.6, 0.2 } },
+	train = { L["Train"], { 0.8, 0.6, 1 } },
+	dungeon = { L["Dungeon"], C.bad },
+	note = { L["Note"], C.muted },
 }
 
 function Route:CreateWindow()
@@ -580,13 +631,59 @@ function Route:UpdateWindow()
 	else
 		f.dungeon:Hide()
 		local state = CharState()
-		local step = self.route.steps[state.step]
-		f.title:SetText(self.route.name or self.route.id)
-		f.progress:SetFormattedText("%d / %d", state.step, #self.route.steps)
-		f.body:SetText(step and self:StepText(step) or "")
-		y = y + f.body:GetStringHeight() + 6
-		local nextOne = self.route.steps[state.step + 1]
-		f.footer:SetText(nextOne and (L["Next:"] .. " " .. self:StepText(nextOne, true)) or "")
+		local route = self.route
+		f.title:SetText(route.name or route.id)
+		f.progress:SetFormattedText("%d / %d", state.step, #route.steps)
+		f.body:SetText("")
+		local shown = 0
+		local index = state.step
+		while index <= #route.steps and shown < s.stepsShown do
+			local step = route.steps[index]
+			if index == state.step or not self:IsStepDone(route, index) then
+				shown = shown + 1
+				local row = f.rows:Acquire(f)
+				local tag = TAG[step[1]] or TAG.note
+				row.tag:Set(tag[1], tag[2])
+				row.tag:SetWidth(68)
+				row.first = index == state.step
+				row.titleText = self:StepText(step, true)
+				local lvl = step.quest and ns.QuestDB and ns.QuestDB[step.quest]
+				row.title:SetText((lvl and UI.Colorize("[" .. lvl[1] .. "] ", C.muted) or "") .. row.titleText)
+				row.title:SetTextColor(row.first and 1 or 0.85, row.first and 1 or 0.85, row.first and 1 or 0.85)
+				row.dist:SetText("")
+				if step.wx then
+					local cont, wx, wy = ns.PlayerWorldPosition()
+					if cont == step.cont and wx then
+						row.dist:SetText(string.format(L["%d yards"], math.floor(math.sqrt((wx - step.wx) ^ 2 + (wy - step.wy) ^ 2))))
+					end
+				end
+				row.bg:SetVertexColor(C.accent[1], C.accent[2], C.accent[3], row.first and 0.12 or 0)
+				local detail = ""
+				if row.first then
+					local full = self:StepText(step)
+					detail = full:match("^[^\n]*\n(.*)$") or ""
+				elseif step.npc then
+					detail = UI.Colorize(step.npc, C.muted)
+				end
+				row.detail:SetText(detail)
+				local h = 26 + (detail ~= "" and (row.detail:GetStringHeight() + 6) or 0)
+				row:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -y)
+				row:SetPoint("RIGHT", f, "RIGHT", -10, 0)
+				row:SetHeight(h)
+				local stepIndex = index
+				row:SetScript("OnClick", function(_, button)
+					if button == "RightButton" then
+						CharState().manualDone[route.id .. ":" .. stepIndex] = true
+						self:Advance()
+					elseif step.wx then
+						ns.SetWorldWaypoint(step.cont, step.wx, step.wy, self:StepText(step, true), OWNER)
+					end
+				end)
+				y = y + h + 2
+			end
+			index = index + 1
+		end
+		f.footer:SetText(string.format(L["Route levels %d-%d"], route.minLevel, route.maxLevel) .. (route.auto and ("  ·  " .. L["built-in route"]) or ""))
 		f.back:SetShown(state.step > 1)
 		f.skip:SetText(L["Done"])
 		f.skip.tooltip = L["Mark this step as done"]
@@ -798,6 +895,8 @@ function Route:GetOptions()
 			questLevelsBelow = { type = "range", order = 7, name = L["Quests up to N levels below mine"], min = 0, max = 15, step = 1 },
 			questLevelsAbove = { type = "range", order = 8, name = L["Quests up to N levels above mine"], min = 0, max = 6, step = 1 },
 			suggestDungeons = { type = "toggle", order = 9, width = "full", name = L["Suggest dungeons for my level"] },
+			autoRoutes = { type = "toggle", order = 9.1, width = "full", name = L["Follow the built-in leveling route of my race (1-60)"] },
+			stepsShown = { type = "range", order = 9.2, name = L["Route steps listed"], min = 1, max = 10, step = 1 },
 			style = {
 				type = "select", order = 5, name = L["Route style"],
 				values = { quests = L["Quests only"], dungeons = L["Quests and dungeons"], fastest = L["Fastest"] },

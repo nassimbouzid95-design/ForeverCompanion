@@ -257,6 +257,19 @@ ns.RegisterRoute({ id = "t1", name = "Test", faction = "Horde", minLevel = 10, m
 local inLog = {}
 C_QuestLog.GetLogIndexForQuestID = function(q) return inLog[q] end
 local Route = FC:GetModule("Route")
+-- built-in routes: walk the first steps of the orc route
+Route:Advance()
+print("auto route", Route.route and Route.route.id, FC.db.char.Route.step, #Route.route.steps)
+for i = 1, 6 do
+	local st = Route:CurrentStep()
+	print("  step", FC.db.char.Route.step, st[1], Route:StepText(st, true))
+	if st.quest and st[1] == "accept" then inLog[st.quest] = 1 end
+	if st.quest and st[1] == "turnin" then inLog[st.quest] = nil end
+	Route:MarkCurrentDone()
+end
+Route:UpdateWindow()
+Route:Settings().autoRoutes = false
+FC.db.char.Route.routeID = nil
 Route:Advance()
 print("route", Route.route and Route.route.id, FC.db.char.Route.step)
 inLog[1] = 1
@@ -382,6 +395,12 @@ print("eco filter", pcall(Eco.Render, Eco))
 for _, c in ipairs{"hc", "hc panel", "hc check", "hc", "pvp", "pvp", "menu"} do
 	print("cmd", c, pcall(FC.SlashCommand, FC, c))
 end
+for _, tab in ipairs({ "route", "gear", "talents", "spells", "rotation" }) do
+	print("lvl tab", tab, pcall(ns.ToggleClassGuide, tab))
+end
+local CG = FC:GetModule("ClassGuide")
+for _, b in ipairs({ 10, 25, 40, 60 }) do CG.bracket = b print("lvl gear", b, pcall(CG.Render, CG)) end
+print("lvl levelup", pcall(CG.PLAYER_LEVEL_UP, CG, "PLAYER_LEVEL_UP", 20))
 print("hc danger", pcall(ns.HardcoreDanger, "target"))
 print("eco scan", pcall(Eco.StartScan, Eco))
 print("hub", pcall(ns.ToggleHub, UIParent), pcall(ns.ToggleHub))
