@@ -663,3 +663,49 @@ L["New in WoW Forever."] = "Novidade do WoW Forever."
 L["Its stats are not published yet: ranked from its item level and type."] = "Os atributos ainda não foram publicados: classificado pelo nível do item e pelo tipo."
 L["New in WoW Forever: details appear once the item has been seen in game."] = "Novidade do WoW Forever: os detalhes aparecem quando o item for visto no jogo."
 L["The 5 best items for each slot that you can get by this level, best first, with where to get them: quests, dungeon drops (new WoW Forever dungeons included), vendors and crafting. Rings and trinkets: wear the first two. Click an item with a quest or a vendor to point the arrow there. Shift-click: link in chat, Ctrl-click: try on."] = "Os 5 melhores itens de cada espaço que você pode obter neste nível, do melhor para o pior, com onde obtê-los: missões, saque de masmorra (novas masmorras do WoW Forever incluídas), vendedores e profissões. Anéis e berloques: use os dois primeiros. Clique em um item de missão ou vendedor para apontar a seta para lá. Shift-clique: link no chat, Ctrl-clique: provar."
+
+-- themes
+L["Appearance"] = "Aparência"
+L["Theme"] = "Tema"
+L["Colours of every window of the addon. Takes effect after a reload of the interface."] = "Cores de todas as janelas do addon. Aplica-se após recarregar a interface."
+L["New theme saved: type /reload (or use the button) to apply it."] = "Novo tema salvo: digite /reload (ou use o botão) para aplicá-lo."
+L["Window size"] = "Tamanho das janelas"
+L["Scale of the addon windows (takes effect after a reload)."] = "Escala das janelas do addon (após recarregar)."
+L["Window opacity"] = "Opacidade das janelas"
+L["Reload the interface"] = "Recarregar a interface"
+L["Forever (cyan)"] = "Forever (ciano)"
+L["Arcane (violet)"] = "Arcano (violeta)"
+L["Horde (red)"] = "Horda (vermelho)"
+L["Alliance (blue & gold)"] = "Aliança (azul e ouro)"
+L["Emerald (green)"] = "Esmeralda (verde)"
+L["Classic (parchment & gold)"] = "Clássico (pergaminho e ouro)"
+L["Midnight (black)"] = "Meia-noite (preto)"
+L["My class colour"] = "Cor da minha classe"
+
+-- wings
+L["Graveyard"] = "Cemitério"
+L["Library"] = "Biblioteca"
+L["Armory"] = "Armaria"
+L["Cathedral"] = "Catedral"
+L["East"] = "Leste"
+L["West"] = "Oeste"
+L["North"] = "Norte"
+L["Lower"] = "Inferior"
+L["Upper"] = "Superior"
+L["Group up for this dungeon (Group Finder or /4 LookingForGroup), do its quests inside, then continue the route."] = "Forme um grupo para esta masmorra (localizador de grupo ou /4 ProcurandoGrupo), faça as missões lá dentro e depois continue a rota."
+
+-- upgrades
+L["BiS"] = "BiS"
+L["Gear upgrade for your level:"] = "Melhoria de equipamento para o seu nível:"
+L["in your bags: equip it"] = "nas suas bolsas: equipe"
+L["and %d more: /fc lvl gear"] = "e mais %d: /fc lvl gear"
+L["%d more upgrades: open the gear list"] = "Mais %d melhorias: abrir a lista de equipamento"
+L["Show the best-in-slot items of my level to pick up"] = "Mostrar os itens BiS do meu nível para pegar"
+L["Tell me when a best-in-slot item of my level can be picked up (chat and route window)"] = "Avisar quando um item BiS do meu nível puder ser obtido (chat e janela da rota)"
+
+-- new
+L["Rare:"] = "Raro:"
+
+-- new
+L["Include the dungeons in the route (off: solo leveling, they are skipped)"] = "Incluir as masmorras na rota (desligado: upar sozinho, elas são puladas)"
+L["Follow the built-in leveling route of my race and class (1-60)"] = "Seguir a rota de evolução integrada da minha raça e classe (1-60)"

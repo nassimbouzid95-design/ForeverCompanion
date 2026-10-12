@@ -1,5 +1,14 @@
 # ForeverCompanion
 
+## v2.4.0
+
+- Leveling routes rebuilt on the WoW Forever quest database (4 455 quests, the new Forever quests and zones included, Skyborne too): one route for every race and class, 72 in all. Each route is simulated from 1 to 60 (walking and riding time, flight paths, boats, kill time, quest and kill experience, quest chains) and its settings are tried again and again to keep the fastest one.
+- Dungeons are now steps of the routes, at the right level, with the dungeon quests to pick up before going in. A dungeon is in the route when it levels at least 75 % as fast as questing at that point (its loot makes up for the rest). Solo? Untick "Include the dungeons in the route" and they are skipped.
+- Best-in-slot reminder: when an item of the best gear list for your level can be picked up (quest reward, dungeon boss, vendor, rare), the route window shows it under the steps and the chat tells you once. Click it to point the arrow there.
+- Best gear lists recomputed with the WoW Forever item stats (856 items read from Wowhead's WoW Forever database), the Forever quest rewards, the new dungeon loot, the new rares and vendors.
+- Dungeon guide: missing bosses added (Ragefire Chasm now has its 4 bosses: Oggleflint, Taragaman the Hungerer, Jergosh the Invoker and Bazzalan; The Stockade, Blackfathom Deeps and Razorfen Kraul completed too), the Forever loot of each boss and of the trash, dungeon quests fixed, and the Scarlet Monastery, Dire Maul and Blackrock Spire wings named.
+- Themes: 8 colour themes, softer by default (Forever, Arcane, Horde, Alliance, Emerald, Classic, Midnight, your class colour), plus window size and opacity, in /fc > Appearance.
+
 ## v2.3.1
 
 - Fixed a Lua error on the world map (Map.lua:24) that repeated while the map was open: the player coordinates were read wrong.

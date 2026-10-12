@@ -24,6 +24,7 @@ end
 -- Waypoint given in world coordinates (quest and instance databases use them).
 function ns.SetWorldWaypoint(continent, wx, wy, title, owner)
 	if not (continent and wx and wy) then return end
+	if continent < 0 then return ns.SetWaypoint(-continent, wx / 10000, wy / 10000, title, owner) end
 	waypoint = { continent = continent, wx = wx, wy = wy, title = title or "", owner = owner }
 	-- Best map to show it on: the zone the player is in, if the point is there.
 	local here = C_Map.GetBestMapForUnit("player")

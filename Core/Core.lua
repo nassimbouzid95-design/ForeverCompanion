@@ -40,6 +40,7 @@ end
 
 function FC:OnInitialize()
 	self.db = LibStub("AceDB-3.0"):New("ForeverCompanionDB", ns.defaults, true)
+	ns.UI.ApplyTheme(self.db.profile.appearance.theme)
 	self.db.RegisterCallback(self, "OnProfileChanged", "RefreshModules")
 	self.db.RegisterCallback(self, "OnProfileCopied", "RefreshModules")
 	self.db.RegisterCallback(self, "OnProfileReset", "RefreshModules")
@@ -52,6 +53,7 @@ function FC:OnInitialize()
 end
 
 function FC:OnEnable()
+	if ns.ResolveNewZones then pcall(ns.ResolveNewZones) end
 	self:RefreshModules()
 	if not self.db.global.welcomed then
 		self.db.global.welcomed = true

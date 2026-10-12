@@ -8,9 +8,11 @@ local C = UI.COLORS
 
 local Guide = ns.NewModule("ClassGuide", {
 	levelUpTips = true, -- new spells and talent point in the chat when you level up
+	upgradeTips = true, -- tell me when a best-in-slot item of my level can be picked up
 }, {
 	window = {},
 })
+ns.RegisterDefaults("char", "ClassGuideTold", {})   -- [itemKey] = level at which the upgrade was announced
 
 local TABS = {
 	{ key = "route", label = "Leveling route" },
@@ -390,6 +392,9 @@ local function SourceText(key)
 	elseif kind == "vendor" then
 		local where = src[3] and ns.WorldPlace and ns.WorldPlace(src[3], src[4], src[5])
 		return L["Vendor:"] .. " " .. (src[2] or "?") .. (where and ("  ·  " .. where) or ""), src[3] and { src[3], src[4], src[5], src[2] }
+	elseif kind == "rare" or kind == "mob" then
+		local where = src[3] and ns.WorldPlace and ns.WorldPlace(src[3], src[4], src[5])
+		return (kind == "rare" and L["Rare:"] or L["Drop:"]) .. " " .. (src[2] or "?") .. (where and ("  ·  " .. where) or ""), src[3] and { src[3], src[4], src[5], src[2] }
 	elseif kind == "crafted" then
 		return L["Crafted:"] .. " " .. (L[src[2]] or src[2] or "?")
 	end
@@ -442,6 +447,99 @@ function Guide:GearRow(key, rank, slot)
 			end
 		end,
 	}, 2)
+end
+
+---------------------------------------------------------------------------
+-- Upgrades to pick up now: for each slot, the best item of the gear list of your level that you can
+-- already use and do not wear (rings and trinkets: better than one of the two you wear).
+---------------------------------------------------------------------------
+local function Worn(slot)
+	local a = GetInventoryItemID and GetInventoryItemID("player", slot[2])
+	local b = slot[5] and GetInventoryItemID and GetInventoryItemID("player", slot[5])
+	return a, b
+end
+
+local function QuestDone(src)
+	local id = src and (src[1] == "quest" and src[2] or src[1] == "fquest" and src[6])
+	return id and C_QuestLog.IsQuestFlaggedCompleted and C_QuestLog.IsQuestFlaggedCompleted(id)
+end
+
+function ns.GearUpgrades()
+	local class, _, side, level = Player()
+	local gear = ns.GearGuide and ns.GearGuide[class]
+	gear = gear and gear[side]
+	if not gear then return {} end
+	local bracket = math.max(10, math.min(60, math.ceil(level / 5) * 5))
+	local set = gear[bracket] or gear[math.max(10, bracket - 5)]
+	if not set then return {} end
+	local out = {}
+	for _, slot in ipairs(SLOTS) do
+		local list = set[slot[1]]
+		if type(list) ~= "table" then list = { list } end
+		local a, b = Worn(slot)
+		-- rank of what is worn (rings / trinkets: the weaker of the two)
+		local wornRank = {}
+		for rank, key in ipairs(list) do
+			local id = ItemRef(key)
+			if id and (id == a or id == b) then wornRank[#wornRank + 1] = rank end
+		end
+		local limit = #list + 1
+		if slot[5] then
+			if #wornRank >= 2 then limit = math.max(wornRank[1], wornRank[2]) end
+		elseif wornRank[1] then
+			limit = wornRank[1]
+		end
+		for rank, key in ipairs(list) do
+			if rank >= limit then break end
+			local id, info = ItemRef(key)
+			local src = ns.GearSources and ns.GearSources[key]
+			if src and src.h and side == 2 then src = src.h end
+			if id and id ~= a and id ~= b and not QuestDone(src) then
+				local name, link, quality, _, minLevel = C_Item.GetItemInfo(id)
+				if not name and C_Item.RequestLoadItemDataByID then C_Item.RequestLoadItemDataByID(id) end
+				minLevel = minLevel or (info and info.req) or 0
+				if minLevel <= level then
+					local text, target = SourceText(key)
+					local bags = C_Item.GetItemCount and C_Item.GetItemCount(id) or 0
+					out[#out + 1] = { key = key, id = id, link = link, name = name or (info and info.name), quality = quality,
+						slot = _G[slot[3]] or L[slot[4]], rank = rank, source = text, target = target, inBags = bags > 0 }
+					break
+				end
+			end
+		end
+	end
+	return out
+end
+
+-- Points the arrow at the place an upgrade comes from (quest giver, vendor, Forever dungeon quest).
+function ns.GoToUpgrade(u)
+	local t = u and u.target
+	if not t then return false end
+	if t.map then ns.SetWaypoint(t.map, t.x, t.y, t.title, "guide")
+	else ns.SetWorldWaypoint(t[1], t[2], t[3], t[4], "guide") end
+	return true
+end
+
+function Guide:AnnounceUpgrades()
+	if not self:Settings().upgradeTips then return end
+	local told = ns.FC.db.char.ClassGuideTold
+	local level = UnitLevel("player")
+	local fresh = {}
+	for _, u in ipairs(ns.GearUpgrades()) do
+		if not told[u.key] and u.name then
+			told[u.key] = level
+			fresh[#fresh + 1] = u
+		end
+	end
+	if #fresh == 0 then return end
+	ns.Print(L["Gear upgrade for your level:"])
+	for i = 1, math.min(4, #fresh) do
+		local u = fresh[i]
+		local what = u.inBags and UI.Colorize(L["in your bags: equip it"], C.good) or (u.source or "")
+		ns.Print(string.format("  %s (%s) - %s", u.link or u.name, u.slot, what))
+	end
+	if #fresh > 4 then ns.Print("  " .. string.format(L["and %d more: /fc lvl gear"], #fresh - 4)) end
+	if ns.Route and ns.Route.Refresh then ns.Route:Refresh() end
 end
 
 function Guide:PageGear()
@@ -651,6 +749,7 @@ function Guide:PLAYER_LEVEL_UP(_, level)
 		end
 	end
 	if self.frame and self.frame:IsShown() then C_Timer.After(1, function() self:Render() end) end
+	C_Timer.After(3, function() self:AnnounceUpgrades() end)
 end
 
 function Guide:GET_ITEM_INFO_RECEIVED()
@@ -665,6 +764,11 @@ end
 function Guide:OnEnable()
 	self:RegisterEvent("PLAYER_LEVEL_UP")
 	self:RegisterEvent("GET_ITEM_INFO_RECEIVED")
+	self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED", function()
+		if ns.Route and ns.Route.Refresh then C_Timer.After(0.5, function() ns.Route:Refresh() end) end
+	end)
+	-- first check a little after login, once item data had time to load
+	C_Timer.After(15, function() self:AnnounceUpgrades() end)
 	self:RegisterEvent("SPELLS_CHANGED", function() if self.frame and self.frame:IsShown() and (self.tab == "spells" or self.tab == "rotation") then self:Render() end end)
 end
 
@@ -684,6 +788,7 @@ function Guide:GetOptions()
 		args = {
 			open = { type = "execute", order = 1, name = L["Open the leveling guide"], func = function() self:Toggle() end },
 			levelUpTips = { type = "toggle", order = 2, width = "full", name = L["When I level up, list the new spells and the talent to take"] },
+			upgradeTips = { type = "toggle", order = 3, width = "full", name = L["Tell me when a best-in-slot item of my level can be picked up (chat and route window)"] },
 		},
 	}
 end

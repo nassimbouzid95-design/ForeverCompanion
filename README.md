@@ -20,7 +20,7 @@ taux de drop, rerolls, sacs, carte, campements, interface et sécurité.
 | --- | --- |
 | Montée 1-60 | Fenêtre d'XP : XP/heure, temps avant le niveau, repos, XP des quêtes prêtes à rendre. Acceptation et rendu automatiques des quêtes en option (Maj pour ignorer). |
 | Route d'XP | Assistant de quêtes : les prochaines quêtes à prendre, faire et rendre selon race, faction, classe et niveau, la plus proche d'abord, avec la flèche dessus. Donjons conseillés pour ton niveau. Routes écrites étape par étape et enregistreur de route. |
-| Guide de leveling | Façon RestedXP : route intégrée de 1 à 60 choisie selon ta race (prendre, faire, rendre, voyager), les 5 meilleurs objets par emplacement tous les 5 niveaux selon ta classe et ta faction, nouveaux donjons de Forever compris, avec où les obtenir, talents niveau par niveau, sorts appris et leur coût, rotation selon ton niveau. `/fc lvl`. |
+| Guide de leveling | Façon RestedXP : route intégrée de 1 à 60 optimisée pour ta race et ta classe avec les nouvelles quêtes de Forever et les donjons à faire au bon niveau (prendre, faire, rendre, voyager), rappel quand un objet BiS de ton niveau est à récupérer, les 5 meilleurs objets par emplacement tous les 5 niveaux selon ta classe et ta faction, nouveaux donjons de Forever compris, avec où les obtenir, talents niveau par niveau, sorts appris et leur coût, rotation selon ton niveau. `/fc lvl`. |
 | Flèche | Flèche vers l'étape ou le point de passage, avec la distance. `/fc way 45.2 61.8 Titre`. |
 | Carte | Icônes sur la carte du monde (entrées de donjons et raids, quêtes à prendre et à rendre, objectifs, notes, campements), coordonnées, notes personnelles (`/fc note`). |
 | Campements | Durées des buffs de camp, campements retenus automatiquement. |
@@ -60,12 +60,12 @@ taux de drop, rerolls, sacs, carte, campements, interface et sécurité.
 - **Donjons et raids** (`Data/InstanceDB.lua`) : boss, butin et taux de drop des boss d'après
   [AtlasLootClassic](https://github.com/Hoizame/AtlasLootClassic) (GPL) ; points de vie, niveaux, monstres
   du trash et taux de drop du trash d'après [CMaNGOS classic-db](https://github.com/cmangos/classic-db) (GPL v3).
-  Ce sont les données de Classic : Forever peut en modifier certaines.
-- **Quêtes** (`Data/QuestDB.lua`) : 3 011 quêtes de Classic avec donneur, rendu et zones d'objectifs, d'après CMaNGOS.
+  Les boss ajoutés par Forever et le nouveau butin viennent de Questie et de la base WoW Forever de Wowhead (`Data/InstanceForever.lua`).
+- **Quêtes** (`Data/QuestDB.lua`) : 4 455 quêtes de WoW Forever (nouvelles quêtes comprises) avec donneur, rendu et zones d'objectifs, d'après [Questie](https://github.com/Questie/Questie) (GPL v3).
   L'assistant de quêtes s'en sert quand aucune route écrite ne correspond.
 - **Quêtes de donjon** (`Data/DungeonQuests.lua`) : 547 quêtes reliées à leur donjon ou raid, avec récompenses, d'après CMaNGOS.
 - **Routes de leveling intégrées** (`Data/RoutesAuto.lua`) : calculées par `tools/gen_routes.py` à partir de la base de quêtes
-  (niveaux, enchaînements, distances, XP des quêtes et des monstres). Pas écrites à la main : à affiner avec les retours en jeu.
+  (niveaux, enchaînements, distances, XP des quêtes et des monstres, donjons). Une route par race et par classe : le simulateur essaie plusieurs réglages et garde le plus rapide.
 - **Équipement, talents, sorts, rotations** (`Data/GearGuide.lua`, `Data/ClassGuide.lua`) : générés depuis CMaNGOS
   (statistiques des objets, récompenses de quêtes, butin, sorts des maîtres de classe) avec des pondérations de stats de leveling.
 - **Taux mesurés** : le collecteur compte les objets tombés en jeu et les affiche à côté des taux de la base.

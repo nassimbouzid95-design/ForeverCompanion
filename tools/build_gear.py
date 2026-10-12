@@ -508,6 +508,205 @@ def load_forever(items, sources, stats, item_ok):
                                          rank=0))
                 stats['forever_quest'] += 1
 
+# ---------------------------------------------------------------- WoW Forever pass
+# Forever changed the game: new quests and quest rewards, new dungeon loot, new rare creatures and vendors, and new
+# stats for many items.  This pass replaces the Classic quest rewards by the Forever ones (QuestieDB Forever data),
+# adds the Forever drops, rares and vendors, and takes the item stats from the Wowhead Forever tooltips
+# (v2-data/forever_items.jsonl, collected by tools: one JSON object per item).
+WH_ITEMS = os.environ.get('WH_ITEMS') or os.path.join(HERE, '..', 'v2-data', 'forever_items.jsonl')
+INSTFIX_JSON = os.path.join(HERE, '..', 'v2-data', 'instances_forever.json')
+WH_SLOT = {'one-hand': 'one-hand', 'main hand': 'main hand', 'two-hand': 'two-hand', 'off hand': 'off hand',
+           'held in off-hand': 'held in off-hand', 'ranged': 'ranged', 'thrown': 'ranged', 'shield': 'off hand'}
+RACE_NAMES = {'human': 1, 'orc': 2, 'dwarf': 4, 'nightelf': 8, 'undead': 16, 'tauren': 32, 'gnome': 64, 'troll': 128}
+CLASS_NAMES = {'warrior': 1, 'paladin': 2, 'hunter': 4, 'rogue': 8, 'priest': 16, 'shaman': 64, 'mage': 128,
+               'warlock': 256, 'druid': 1024}
+EFFECTS = [
+    # Forever's own wordings: "healing done by up to 10 and damage done by up to 3", "+10 healing done (up to) and +3 damage"
+    (re.compile(r'healing done by up to (\d+) and damage done by up to (\d+)', re.I), 'healdmg'),
+    (re.compile(r'\+(\d+) healing done \(up to\) and \+(\d+) damage done', re.I), 'healdmg'),
+    (re.compile(r'spell damage and healing (?:by|bonus) up to (\d+)', re.I), 'spell'),
+    (re.compile(r'damage done by magical spells and effects by up to (\d+)', re.I), 'spell'),
+    (re.compile(r'(Shadow|Frost|Fire|Nature|Arcane|Holy) spell and effect damage by up to (\d+)', re.I), 'school'),
+    (re.compile(r'damage and healing done by magical spells and effects by up to (\d+)', re.I), 'spell'),
+    (re.compile(r'healing done by spells and effects by up to (\d+)', re.I), 'heal'),
+    (re.compile(r'damage done by (Shadow|Frost|Fire|Nature|Arcane|Holy) spells and effects by up to (\d+)', re.I), 'school'),
+    (re.compile(r'critical strike with spells by ([\d.]+)%', re.I), 'scrit'),
+    (re.compile(r'chance to hit with spells by ([\d.]+)%', re.I), 'shit'),
+    (re.compile(r'critical strike by ([\d.]+)%', re.I), 'crit'),
+    (re.compile(r'chance to hit by ([\d.]+)%', re.I), 'hit'),
+    (re.compile(r'\+(\d+) ranged attack power', re.I), 'rap'),
+    (re.compile(r'\+(\d+) attack power', re.I), 'ap'),
+    (re.compile(r'attack power by (\d+)', re.I), 'ap'),
+    (re.compile(r'(?:restores )?\+?(\d+) mana (?:per|every) 5 sec', re.I), 'mp5'),
+    (re.compile(r'defense (?:rating |skill )?(?:by |\+)(\d+)', re.I), 'defense'),
+    (re.compile(r'block value of your shield by (\d+)', re.I), 'block'),
+    (re.compile(r'\+(\d+) armor', re.I), 'armor'),
+    (re.compile(r'(?:Sword|Axe|Mace|Dagger|Bow|Gun|Crossbow|Staff|Polearm|Fist Weapon|Two-handed \w+)s? skill (?:by |\+)(\d+)', re.I), 'wskill'),
+]
+
+
+def wh_stats(rec):
+    st = collections.Counter()
+    for k in ('str', 'agi', 'sta', 'int', 'spi'):
+        if rec.get(k): st[k] += rec[k]
+    st['armor'] += (rec.get('armor') or 0) + (rec.get('bonus_armor') or 0)
+    if rec.get('block'): st['block'] += rec['block']
+    for e in rec.get('effects') or []:
+        if re.match(r'\s*use:', e, re.I): continue
+        if re.search(r'chance on hit', e, re.I): st['proc'] += 1; continue
+        for rx, key in EFFECTS:
+            m = rx.search(e)
+            if not m: continue
+            if key == 'school': st[m[1].lower()] += int(m[2])
+            elif key == 'healdmg': st['spell'] += int(m[2]); st['heal'] += max(0, int(m[1]) - int(m[2]))  # 'spell' already counts as healing
+            else: st[key] += float(m[1])
+            break
+    if rec.get('dmin') and rec.get('dmax') and rec.get('speed'):
+        st['dps'] = (rec['dmin'] + rec['dmax']) / 2 / float(rec['speed'])
+    return {k: v for k, v in st.items() if v}
+
+
+def load_wowhead():
+    out = {}
+    paths = [WH_ITEMS] if os.path.exists(WH_ITEMS) else []
+    for p in paths:
+        for line in open(p):
+            line = line.strip()
+            if not line: continue
+            try: r = json.loads(line)
+            except ValueError: continue
+            if r.get('id') and not r.get('error') and r.get('name'): out[int(r['id'])] = r
+    return out
+
+
+def forever_pass(items, sources, stats, item_ok, raid_items):
+    sys.path.insert(0, HERE)
+    import forever_db as F
+    IT = items.it
+    FQ, FN, FI = F.load('Quest'), F.load('Npc'), F.load('Item')
+    qdb = {int(k): v for k, v in json.load(open(os.path.join(F.FDB_DIR, 'questdb.json'))).items()}
+    wh = load_wowhead()
+
+    # 1. stats and shape of the items Wowhead knows
+    for iid, rec in wh.items():
+        slot = (rec.get('slot') or '').strip().lower()
+        typ = (rec.get('type') or '').strip().lower()
+        if slot == 'thrown': typ = 'thrown'
+        if slot in ('shirt', 'tabard', 'ammo', 'relic', 'projectile', 'bag', ''): continue
+        if slot in ('ranged',) and typ in ('wand',): pass
+        shape = forever_row({'slot': WH_SLOT.get(slot, slot), 'type': typ if typ not in ('miscellaneous',) else ''})
+        if not shape:
+            stats['wh_unshaped'] += 1
+            continue
+        cls_, sub, inv = shape
+        il = rec.get('ilvl') or int(IT.get(iid, {}).get('ItemLevel', 0) or 0)
+        req = rec.get('req')
+        if req is None: req = int(IT[iid]['RequiredLevel']) if iid in IT else max(1, il - 5)
+        q = rec.get('q') or (int(IT[iid]['Quality']) if iid in IT else 2)
+        ac = 0
+        for name in re.split(r'[,/ ]+', (rec.get('classes') or '').lower()):
+            ac |= CLASS_NAMES.get(name, 0)
+        rm = 0
+        for name in re.split(r'[,/]+', (rec.get('races') or '').lower()):
+            rm |= RACE_NAMES.get(name.strip().replace(' ', ''), 0)
+        row = dict(IT.get(iid) or {})
+        if rm: row['AllowableRace'] = str(rm)
+        row.update(entry=iid, name=rec['name'], Quality=str(q), ItemLevel=str(il), RequiredLevel=str(req), **{
+            'class': str(cls_), 'subclass': str(sub), 'InventoryType': str(inv), 'AllowableClass': str(ac or -1)})
+        for k, v in (('AllowableRace', '-1'), ('requiredhonorrank', '0'), ('RequiredReputationFaction', '0'),
+                     ('RequiredReputationRank', '0'), ('RandomProperty', '0'), ('RequiredSkill', '0'),
+                     ('bonding', '1' if (rec.get('bind') or '').lower() in ('bop', 'binds when picked up') else '2'),
+                     ('startquest', '0')):
+            row.setdefault(k, v)
+        if re.search(r'requires .* - (honored|revered|exalted)', rec.get('source') or '', re.I):
+            row['RequiredReputationFaction'] = '1'; row['RequiredReputationRank'] = '5'
+        if iid < 200000 and iid in IT:
+            old = items.stats(iid, 'WARRIOR')
+            new = wh_stats(rec)
+            if any(int(old.get(k, 0)) != int(new.get(k, 0)) for k in ('str', 'agi', 'sta', 'int', 'spi')):
+                stats['wh_changed_classic'] += 1
+            stats['wh_classic'] += 1
+        IT[iid] = row
+        items.extra[iid] = dict(stats=wh_stats(rec))
+        if iid >= 200000 or iid not in FOREVER_ITEMS:
+            FOREVER_ITEMS[iid] = dict(name=rec['name'], id=iid, ilvl=il, quality=q, slot=rec.get('slot') or '',
+                                      type=rec.get('type') or '', est=False)
+        stats['wh_items'] += 1
+    # new Forever items Wowhead did not give: type from QuestieDB, stats estimated from the item level
+    for k, it in FI.items():
+        iid = int(k)
+        if iid < 200000 or iid in IT or F.L(it, 12) not in (2, 4): continue
+        stats['forever_unknown_stats'] += 1
+
+    # 2. quest rewards: the Forever quests replace the Classic ones
+    for iid in list(sources):
+        sources[iid] = [x for x in sources[iid] if x['kind'] != 'quest']
+    rewards = collections.defaultdict(list)
+    for k, it in FI.items():
+        for q in F.lst(F.L(it, 6)):
+            if q: rewards[int(q)].append(int(k))
+    RAIDZ = BG_ZONES | RAID_ZONES
+    for qid, its in rewards.items():
+        q = qdb.get(qid)
+        if not q or F.L(FQ.get(str(qid), {}), 17) in RAIDZ: continue
+        if F.L(FQ.get(str(qid), {}), 18): continue          # profession quests
+        lvl = max(q['min'], (q['lvl'] if q['lvl'] > 0 else q['min']) - 2)
+        good = [i for i in its if item_ok(i) and i not in raid_items]
+        for iid in good:
+            sources[iid].append(dict(kind='quest', id=qid, lvl=lvl, side=q['side'], races=q['races'] & 0xFFFFFFFF,
+                                     classes=q['classes'], choice=qid if len(its) > 1 else None, indb=True, rank=0))
+            stats['forever_quest_src'] += 1
+
+    # 3. drops added by the Forever corrections (missing bosses, new loot, trash)
+    if os.path.exists(INSTFIX_JSON):
+        fix = json.load(open(INSTFIX_JSON))
+        mins = {i['key']: i['min'] for i in load_instances()}
+        for key, v in fix.items():
+            lvl = mins.get(key, 1)
+            for a in v.get('add', []):
+                for iid in a['loot']:
+                    if item_ok(iid): sources[iid].append(dict(kind='drop', inst=key, boss=a['name'], rate=-1, lvl=lvl, side=0, races=0, classes=0, rank=1))
+            for npc, its in v.get('loot', {}).items():
+                n = FN.get(str(npc))
+                for iid in its:
+                    if item_ok(iid): sources[iid].append(dict(kind='drop', inst=key, boss=F.L(n, 1) if n else '?', rate=-1, lvl=lvl, side=0, races=0, classes=0, rank=1))
+            for iid in v.get('trash', []):
+                if item_ok(iid): sources[iid].append(dict(kind='drop', inst=key, boss='Trash', rate=-1, lvl=lvl, side=0, races=0, classes=0, rank=4))
+            stats['forever_fix_src'] += 1
+
+    # 4. new rare creatures of the open world and their new items
+    for k, it in FI.items():
+        iid = int(k)
+        if iid < 200000 or not item_ok(iid) or iid in raid_items: continue
+        npcs = [n for n in F.lst(F.L(it, 2)) if n]
+        if not npcs or len(npcs) > 3: continue
+        for n in npcs:
+            row = FN.get(str(n))
+            if not row or not F.L(row, 7) or not F.L(row, 1): continue
+            pts = F.npc_points(n)
+            if not pts: continue
+            lvl = F.L(row, 5) or F.L(row, 4) or int(IT[iid]['RequiredLevel'])
+            # rank 2 = rare, 4 = rare elite; other creatures are plain open-world drops
+            kind = 'rare' if F.L(row, 6) in (2, 4) else 'mob'
+            sources[iid].append(dict(kind=kind, npc=F.L(row, 1), pos=pts[0], lvl=max(int(IT[iid]['RequiredLevel']), lvl - 2),
+                                     side=0, races=0, classes=0, rank=2))
+            stats['forever_rare_src'] += 1
+            break
+
+    # 5. Forever vendors of the new items
+    for k, it in FI.items():
+        iid = int(k)
+        if iid < 200000 or not item_ok(iid) or iid in raid_items: continue
+        for n in [x for x in F.lst(F.L(it, 14)) if x][:1]:
+            row = FN.get(str(n))
+            pts = F.npc_points(n)
+            if not row or not pts or not F.L(row, 1): continue
+            side = {'A': 1, 'H': 2}.get(F.L(row, 13), 0)
+            sources[iid].append(dict(kind='vendor', npc=F.L(row, 1), pos=pts[0], lvl=int(IT[iid]['RequiredLevel']),
+                                     side=side, races=0, classes=0, rank=2))
+            stats['forever_vendor_src'] += 1
+
+
 # ---------------------------------------------------------------- main build
 def main():
     ap = argparse.ArgumentParser()
@@ -726,6 +925,7 @@ def main():
             stats['crafted_src'] += 1
 
     load_forever(items, sources, stats, item_ok)
+    forever_pass(items, sources, stats, item_ok, raid_items)
     print(dict(stats), "items with sources:", len(sources), "raid-only items:", len(raid_items), "raid npcs:", len(raid_npcs), file=sys.stderr)
 
     # ---------------------------------------------------------------- selection
@@ -779,7 +979,7 @@ def main():
             if inv == 13: return ['mh', 'oh'] if can_dual(cls, L) else ['mh']
         return []
 
-    FACTORS = dict(quest=1.0, fquest=1.0, drop=1.0, vendor=0.97, crafted=0.9)
+    FACTORS = dict(quest=1.0, fquest=1.0, drop=1.0, vendor=0.97, crafted=0.9, rare=0.95, mob=0.95)
 
     def best_source(iid, cls, faction, L):
         ok = [s for s in sources[iid] if src_ok(s, cls, faction, L)]
@@ -932,7 +1132,8 @@ def ikey(iid, IT):
 
 def write_lua(path, guide, used_src, IT, inst):
     L = ["-- ForeverCompanion: leveling best-in-slot gear per class, faction and level bracket (generated by",
-         "-- tools/build_gear.py, do not edit by hand).  Source: CMaNGOS classic-db + Data/InstanceDB.lua.",
+         "-- tools/build_gear.py, do not edit by hand).  Sources: QuestieDB Forever data (quests, rewards, drops, vendors),",
+         "-- Wowhead Forever item tooltips (stats of the new and changed items), CMaNGOS classic-db + Data/InstanceDB.lua.",
          "-- Specs and stat weights (points per stat; crit/hit per 1 %; dps = weapon DPS):"]
     for cls, w in W.items():
         L.append(f"--   {cls} ({SPEC[cls]}): " + ", ".join(f"{k} {v:g}" for k, v in w.items() if v))
@@ -956,6 +1157,9 @@ def write_lua(path, guide, used_src, IT, inst):
     L += ["", "-- Where each item comes from:",
           '--   { "quest", questID }  { "drop", instanceKey, boss, rate% (-1 unknown) }',
           '--   { "vendor", npc, continent (0 Eastern Kingdoms, 1 Kalimdor), worldX, worldY }  { "crafted", profession }',
+          '--   { "rare", creature, continent, worldX, worldY }  (rare creature of the open world, new WoW Forever loot)',
+          '--   { "mob", creature, continent, worldX, worldY }   (other open-world creature, new WoW Forever loot)',
+          '--   Negative continent: -uiMapID of a new Forever zone, x and y = map position * 10000.',
           "-- When Alliance and Horde get the item from different quests, the Horde one is in field h.",
           "ns.GearSources = {"]
     def fmt(s):
@@ -966,6 +1170,8 @@ def write_lua(path, guide, used_src, IT, inst):
         if s['kind'] == 'drop': return f'"drop", {lua_str(s["inst"])}, {lua_str(s["boss"])}, {s["rate"]:g}'
         if s['kind'] == 'vendor':
             m, x, y = s['pos']; return f'"vendor", {lua_str(s["npc"])}, {m}, {round(x)}, {round(y)}'
+        if s['kind'] in ('rare', 'mob'):
+            m, x, y = s['pos']; return f'"{s["kind"]}", {lua_str(s["npc"])}, {m}, {round(x)}, {round(y)}'
         return f'"crafted", {lua_str(s["prof"])}'
     for iid in sorted(used_src):
         srcs = list(used_src[iid].values())

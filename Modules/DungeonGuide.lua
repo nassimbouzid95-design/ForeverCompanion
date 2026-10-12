@@ -36,7 +36,9 @@ end
 
 local function EntryName(entry)
 	if entry.kind == "world" then return L["World bosses"] end
-	return entry.name or ns.InstanceName(entry.id)
+	local name = entry.name or ns.InstanceName(entry.id)
+	if entry.wing then name = name .. " - " .. L[entry.wing] end
+	return name
 end
 ns.InstanceEntryName = EntryName
 
@@ -150,7 +152,7 @@ function Guide:Quests(entry, all)
 	local side = faction == "Alliance" and 1 or faction == "Horde" and 2 or 0
 	local _, _, raceID = UnitRace("player")
 	local _, _, classID = UnitClass("player")
-	local raceBit = raceID and raceID >= 1 and raceID <= 8 and 2 ^ (raceID - 1) or nil
+	local raceBit = ns.PlayerRaceBit()
 	local classBit = classID and 2 ^ (classID - 1)
 	local out = {}
 	for _, id in ipairs(ids) do

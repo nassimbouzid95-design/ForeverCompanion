@@ -10,6 +10,7 @@ ns.defaults = {
 	profile = {
 		modules = {},
 		minimap = { hide = false, angle = 215 },
+		appearance = { theme = "forever", scale = 1, opacity = 0.96 },
 	},
 	global = {},
 	char = {},
@@ -187,6 +188,47 @@ function ns.WorldToMap(continent, wx, wy, mapID)
 	local x, y = pos:GetXY()
 	if not x or x < 0 or x > 1 or y < 0 or y > 1 then return nil end
 	return x, y
+end
+
+-- Race bit of the player in quest race masks (WoW Forever adds Skyborne: race IDs 95 and 96).
+function ns.PlayerRaceBit()
+	local _, _, raceID = UnitRace("player")
+	if not raceID or ns.IsSecret(raceID) then return nil end
+	if raceID >= 1 and raceID <= 8 then return 2 ^ (raceID - 1) end
+	if raceID == 95 then return 4294967296 end
+	if raceID == 96 then return 8589934592 end
+	return nil
+end
+
+-- Quests of the new Forever zones are stored with map coordinates (continent = -uiMapID, x and y = map
+-- position * 10000) until the game can place them in the world. Converted once at login, in place.
+local function Resolve(c, x, y)
+	if not c or c >= 0 then return c, x, y end
+	local cont, wx, wy = ns.MapToWorld(-c, x / 10000, y / 10000)
+	if cont then return cont, math.floor(wx + 0.5), math.floor(wy + 0.5) end
+	return c, x, y
+end
+ns.ResolvePosition = Resolve
+
+function ns.ResolveNewZones()
+	for _, q in pairs(ns.QuestDB or {}) do
+		if q[8] < 0 then q[8], q[9], q[10] = Resolve(q[8], q[9], q[10]) end
+		if q[11] < 0 then q[11], q[12], q[13] = Resolve(q[11], q[12], q[13]) end
+		local o = q[14]
+		for i = 1, #o, 3 do
+			if o[i] < 0 then o[i], o[i + 1], o[i + 2] = Resolve(o[i], o[i + 1], o[i + 2]) end
+		end
+	end
+	for _, q in pairs(ns.DungeonQuestInfo or {}) do
+		for _, npc in ipairs({ q.giver, q.turnin }) do
+			if npc and npc[2] and npc[2] < 0 then npc[2], npc[3], npc[4] = Resolve(npc[2], npc[3], npc[4]) end
+		end
+	end
+	for _, route in ipairs(ns.Routes or {}) do
+		for _, step in ipairs(rawget(route, "steps") or {}) do   -- packed routes resolve when expanded
+			if step.cont and step.cont < 0 then step.cont, step.wx, step.wy = Resolve(step.cont, step.wx, step.wy) end
+		end
+	end
 end
 
 function ns.PlayerWorldPosition()

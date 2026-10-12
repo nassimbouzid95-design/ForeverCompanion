@@ -663,3 +663,49 @@ L["New in WoW Forever."] = true
 L["Its stats are not published yet: ranked from its item level and type."] = true
 L["New in WoW Forever: details appear once the item has been seen in game."] = true
 L["The 5 best items for each slot that you can get by this level, best first, with where to get them: quests, dungeon drops (new WoW Forever dungeons included), vendors and crafting. Rings and trinkets: wear the first two. Click an item with a quest or a vendor to point the arrow there. Shift-click: link in chat, Ctrl-click: try on."] = true
+
+-- themes
+L["Appearance"] = true
+L["Theme"] = true
+L["Colours of every window of the addon. Takes effect after a reload of the interface."] = true
+L["New theme saved: type /reload (or use the button) to apply it."] = true
+L["Window size"] = true
+L["Scale of the addon windows (takes effect after a reload)."] = true
+L["Window opacity"] = true
+L["Reload the interface"] = true
+L["Forever (cyan)"] = true
+L["Arcane (violet)"] = true
+L["Horde (red)"] = true
+L["Alliance (blue & gold)"] = true
+L["Emerald (green)"] = true
+L["Classic (parchment & gold)"] = true
+L["Midnight (black)"] = true
+L["My class colour"] = true
+
+-- wings
+L["Graveyard"] = true
+L["Library"] = true
+L["Armory"] = true
+L["Cathedral"] = true
+L["East"] = true
+L["West"] = true
+L["North"] = true
+L["Lower"] = true
+L["Upper"] = true
+L["Group up for this dungeon (Group Finder or /4 LookingForGroup), do its quests inside, then continue the route."] = true
+
+-- upgrades
+L["BiS"] = true
+L["Gear upgrade for your level:"] = true
+L["in your bags: equip it"] = true
+L["and %d more: /fc lvl gear"] = true
+L["%d more upgrades: open the gear list"] = true
+L["Show the best-in-slot items of my level to pick up"] = true
+L["Tell me when a best-in-slot item of my level can be picked up (chat and route window)"] = true
+
+-- new
+L["Rare:"] = true
+
+-- new
+L["Include the dungeons in the route (off: solo leveling, they are skipped)"] = true
+L["Follow the built-in leveling route of my race and class (1-60)"] = true

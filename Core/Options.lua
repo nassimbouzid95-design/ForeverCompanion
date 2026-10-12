@@ -70,6 +70,47 @@ local function BuildOptions()
 							ns.UpdateMinimapButton()
 						end,
 					},
+					lookHeader = { type = "header", order = 3, name = L["Appearance"] },
+					theme = {
+						type = "select",
+						order = 4,
+						name = L["Theme"],
+						desc = L["Colours of every window of the addon. Takes effect after a reload of the interface."],
+						values = function()
+							local v = {}
+							for _, key in ipairs(ns.UI.THEME_ORDER) do v[key] = L[ns.UI.THEMES[key].label] end
+							return v
+						end,
+						sorting = ns.UI.THEME_ORDER,
+						get = function() return FC.db.profile.appearance.theme end,
+						set = function(_, v)
+							FC.db.profile.appearance.theme = v
+							ns.Print(L["New theme saved: type /reload (or use the button) to apply it."])
+						end,
+					},
+					scale = {
+						type = "range",
+						order = 5,
+						name = L["Window size"],
+						desc = L["Scale of the addon windows (takes effect after a reload)."],
+						min = 0.7, max = 1.4, step = 0.05, isPercent = true,
+						get = function() return FC.db.profile.appearance.scale end,
+						set = function(_, v) FC.db.profile.appearance.scale = v end,
+					},
+					opacity = {
+						type = "range",
+						order = 6,
+						name = L["Window opacity"],
+						min = 0.5, max = 1, step = 0.02, isPercent = true,
+						get = function() return FC.db.profile.appearance.opacity end,
+						set = function(_, v) FC.db.profile.appearance.opacity = v end,
+					},
+					reload = {
+						type = "execute",
+						order = 7,
+						name = L["Reload the interface"],
+						func = function() ReloadUI() end,
+					},
 					modulesHeader = { type = "header", order = 10, name = L["Modules"] },
 				},
 			},

@@ -663,3 +663,49 @@ L["New in WoW Forever."] = "Новинка WoW Forever."
 L["Its stats are not published yet: ranked from its item level and type."] = "Характеристики ещё не опубликованы: место определено по уровню и типу предмета."
 L["New in WoW Forever: details appear once the item has been seen in game."] = "Новинка WoW Forever: подробности появятся, когда предмет встретится в игре."
 L["The 5 best items for each slot that you can get by this level, best first, with where to get them: quests, dungeon drops (new WoW Forever dungeons included), vendors and crafting. Rings and trinkets: wear the first two. Click an item with a quest or a vendor to point the arrow there. Shift-click: link in chat, Ctrl-click: try on."] = "5 лучших предметов для каждой ячейки, доступных к этому уровню, от лучшего к худшему, и где их получить: задания, добыча в подземельях (включая новые подземелья WoW Forever), торговцы и профессии. Кольца и аксессуары: надевайте первые два. Щелчок по предмету с заданием или торговцем направляет туда стрелку. Shift-щелчок: ссылка в чат, Ctrl-щелчок: примерить."
+
+-- themes
+L["Appearance"] = "Внешний вид"
+L["Theme"] = "Тема"
+L["Colours of every window of the addon. Takes effect after a reload of the interface."] = "Цвета всех окон аддона. Применяются после перезагрузки интерфейса."
+L["New theme saved: type /reload (or use the button) to apply it."] = "Тема сохранена: введите /reload (или нажмите кнопку), чтобы применить её."
+L["Window size"] = "Размер окон"
+L["Scale of the addon windows (takes effect after a reload)."] = "Масштаб окон аддона (после перезагрузки)."
+L["Window opacity"] = "Непрозрачность окон"
+L["Reload the interface"] = "Перезагрузить интерфейс"
+L["Forever (cyan)"] = "Forever (голубая)"
+L["Arcane (violet)"] = "Тайная магия (фиолетовая)"
+L["Horde (red)"] = "Орда (красная)"
+L["Alliance (blue & gold)"] = "Альянс (синий и золото)"
+L["Emerald (green)"] = "Изумрудная (зелёная)"
+L["Classic (parchment & gold)"] = "Классика (пергамент и золото)"
+L["Midnight (black)"] = "Полночь (чёрная)"
+L["My class colour"] = "Цвет моего класса"
+
+-- wings
+L["Graveyard"] = "Кладбище"
+L["Library"] = "Библиотека"
+L["Armory"] = "Оружейная"
+L["Cathedral"] = "Собор"
+L["East"] = "Восток"
+L["West"] = "Запад"
+L["North"] = "Север"
+L["Lower"] = "Нижний ярус"
+L["Upper"] = "Верхний ярус"
+L["Group up for this dungeon (Group Finder or /4 LookingForGroup), do its quests inside, then continue the route."] = "Соберите группу в это подземелье (поиск группы или /4 ПоискСпутников), выполните задания внутри и продолжайте маршрут."
+
+-- upgrades
+L["BiS"] = "BiS"
+L["Gear upgrade for your level:"] = "Улучшение экипировки для вашего уровня:"
+L["in your bags: equip it"] = "в сумках: наденьте"
+L["and %d more: /fc lvl gear"] = "и ещё %d: /fc lvl gear"
+L["%d more upgrades: open the gear list"] = "Ещё улучшений: %d — открыть список экипировки"
+L["Show the best-in-slot items of my level to pick up"] = "Показывать BiS-предметы моего уровня, которые можно получить"
+L["Tell me when a best-in-slot item of my level can be picked up (chat and route window)"] = "Сообщать, когда можно получить BiS-предмет моего уровня (чат и окно маршрута)"
+
+-- new
+L["Rare:"] = "Редкий:"
+
+-- new
+L["Include the dungeons in the route (off: solo leveling, they are skipped)"] = "Включать подземелья в маршрут (выкл.: прокачка в одиночку, они пропускаются)"
+L["Follow the built-in leveling route of my race and class (1-60)"] = "Следовать встроенному маршруту прокачки для моей расы и класса (1-60)"

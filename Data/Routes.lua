@@ -46,6 +46,85 @@ function ns.RegisterRoute(route)
 	ns.Routes[#ns.Routes + 1] = route
 end
 
+-- Generated routes (Data\RoutesAuto.lua) are packed in a string, expanded the first time the route is used:
+--   a<quest> accept, c<quest>[@n] objectives (n-th objective point), t<quest> turn in, x<quest> abandon,
+--   l<level> grind to level, d<key>@<level>,<last level> dungeon (ns.InstanceDB key), g<cont>,<x>,<y>,<zone>[,s] travel
+--   (zone = index in ns.RouteZones, s = boat or zeppelin).  Positions come from ns.QuestDB.
+-- Localised name of ns.RouteZones[index] = { uiMapID, English name }.
+function ns.RouteZoneName(index)
+	local z = ns.RouteZones and ns.RouteZones[index]
+	if not z then return nil end
+	local info = z[1] > 0 and C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(z[1])
+	return info and info.name or z[2]
+end
+
+local function QuestPoint(q, i)
+	if q then return q[i], q[i + 1], q[i + 2] end
+end
+
+local function Expand(route)
+	local steps = {}
+	local npcs, names = ns.QuestNPCs or {}, ns.QuestNPCNames or {}
+	for token in route.packed:gmatch("%S+") do
+		local kind, rest = token:sub(1, 1), token:sub(2)
+		local step
+		if kind == "a" or kind == "t" or kind == "c" or kind == "x" then
+			local id, point = rest:match("^(%d+)@?(%d*)$")
+			id = tonumber(id)
+			local q = ns.QuestDB and ns.QuestDB[id]
+			local who = npcs[id]
+			if kind == "a" then
+				step = { "accept", quest = id, npc = who and names[who[1]] or nil }
+				step.cont, step.wx, step.wy = QuestPoint(q, 8)
+			elseif kind == "t" then
+				step = { "turnin", quest = id, npc = who and names[who[2]] or nil }
+				step.cont, step.wx, step.wy = QuestPoint(q, 11)
+			elseif kind == "c" then
+				step = { "complete", quest = id }
+				local o = q and q[14]
+				if o and #o >= 3 then
+					local i = (tonumber(point) or 0) * 3 + 1
+					if not o[i] then i = 1 end
+					step.cont, step.wx, step.wy = o[i], o[i + 1], o[i + 2]
+				end
+			else
+				step = { "note", quest = id, abandon = true }
+			end
+		elseif kind == "l" then
+			step = { "level", level = tonumber(rest) }
+		elseif kind == "d" then
+			local key, lvl, maxLvl = rest:match("^([^@]+)@?(%d*),?(%d*)$")
+			step = { "dungeon", key = key, lvl = tonumber(lvl), maxLvl = tonumber(maxLvl) }
+			for _, entry in ipairs(ns.InstanceDB or {}) do
+				if entry.key == key then step.instance = entry.id; step.entry = entry break end
+			end
+		elseif kind == "g" then
+			local c, x, y, z, ship = rest:match("^(-?%d+),(-?%d+),(-?%d+),(%d+),?(s?)$")
+			if c then
+				step = { "goto", zone = ns.RouteZoneName(tonumber(z)), ship = ship == "s" or nil }
+				step.cont, step.wx, step.wy = ns.ResolvePosition(tonumber(c), tonumber(x), tonumber(y))
+			end
+		end
+		if step then steps[#steps + 1] = step end
+	end
+	return steps
+end
+
+local PACKED = { __index = function(route, key)
+	if key == "steps" then
+		local steps = Expand(route)
+		rawset(route, "steps", steps)
+		return steps
+	end
+end }
+
+function ns.RegisterPackedRoute(id, zone, faction, races, class, minLevel, maxLevel, packed)
+	ns.Routes[#ns.Routes + 1] = setmetatable({
+		id = id, name = ns.RouteZoneName(zone) or "", faction = faction, races = races, classes = class and { class } or nil,
+		minLevel = minLevel, maxLevel = maxLevel, auto = true, packed = packed,
+	}, PACKED)
+end
+
 local function Contains(list, value)
 	if not list then return true end
 	for _, v in ipairs(list) do

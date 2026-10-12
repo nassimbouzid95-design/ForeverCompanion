@@ -27,6 +27,77 @@ UI.COLORS = {
 }
 local C = UI.COLORS
 
+---------------------------------------------------------------------------
+-- Themes: each one replaces the colours above (in place, so every module sees them).  Applied once
+-- at login, before any window is built; changing the theme asks for a /reload.
+---------------------------------------------------------------------------
+UI.THEMES = {
+	forever = { label = "Forever (cyan)" },
+	arcane = {
+		label = "Arcane (violet)",
+		bg = { 0.055, 0.043, 0.082, 0.96 }, panel = { 0.094, 0.075, 0.137, 1 }, panel2 = { 0.133, 0.106, 0.192, 1 },
+		hover = { 0.188, 0.149, 0.267, 1 }, header = { 0.075, 0.059, 0.114, 1 }, header2 = { 0.16, 0.11, 0.26, 1 },
+		border = { 0.255, 0.204, 0.353, 1 }, accent = { 0.72, 0.45, 1.00, 1 },
+	},
+	horde = {
+		label = "Horde (red)",
+		bg = { 0.071, 0.043, 0.039, 0.96 }, panel = { 0.122, 0.071, 0.063, 1 }, panel2 = { 0.169, 0.098, 0.086, 1 },
+		hover = { 0.235, 0.133, 0.114, 1 }, header = { 0.094, 0.055, 0.047, 1 }, header2 = { 0.24, 0.09, 0.07, 1 },
+		border = { 0.333, 0.192, 0.165, 1 }, accent = { 0.95, 0.30, 0.22, 1 },
+	},
+	alliance = {
+		label = "Alliance (blue & gold)",
+		bg = { 0.035, 0.051, 0.090, 0.96 }, panel = { 0.063, 0.090, 0.153, 1 }, panel2 = { 0.090, 0.125, 0.208, 1 },
+		hover = { 0.125, 0.173, 0.282, 1 }, header = { 0.047, 0.067, 0.118, 1 }, header2 = { 0.09, 0.15, 0.30, 1 },
+		border = { 0.180, 0.239, 0.373, 1 }, accent = { 0.35, 0.60, 1.00, 1 }, gold = { 1.00, 0.84, 0.36, 1 },
+	},
+	emerald = {
+		label = "Emerald (green)",
+		bg = { 0.035, 0.067, 0.055, 0.96 }, panel = { 0.059, 0.110, 0.090, 1 }, panel2 = { 0.086, 0.153, 0.125, 1 },
+		hover = { 0.118, 0.212, 0.173, 1 }, header = { 0.047, 0.086, 0.071, 1 }, header2 = { 0.07, 0.20, 0.14, 1 },
+		border = { 0.165, 0.290, 0.239, 1 }, accent = { 0.30, 0.92, 0.60, 1 },
+	},
+	classic = {
+		label = "Classic (parchment & gold)",
+		bg = { 0.078, 0.063, 0.043, 0.96 }, panel = { 0.129, 0.106, 0.075, 1 }, panel2 = { 0.176, 0.145, 0.102, 1 },
+		hover = { 0.243, 0.200, 0.141, 1 }, header = { 0.106, 0.086, 0.059, 1 }, header2 = { 0.25, 0.19, 0.11, 1 },
+		border = { 0.380, 0.306, 0.196, 1 }, accent = { 1.00, 0.78, 0.30, 1 }, gold = { 1.00, 0.88, 0.55, 1 },
+		text = { 0.96, 0.92, 0.84, 1 }, muted = { 0.68, 0.62, 0.52, 1 },
+	},
+	midnight = {
+		label = "Midnight (black)",
+		bg = { 0.020, 0.020, 0.024, 0.97 }, panel = { 0.055, 0.055, 0.063, 1 }, panel2 = { 0.086, 0.086, 0.098, 1 },
+		hover = { 0.133, 0.133, 0.153, 1 }, header = { 0.035, 0.035, 0.043, 1 }, header2 = { 0.10, 0.10, 0.12, 1 },
+		border = { 0.165, 0.165, 0.188, 1 }, accent = { 0.85, 0.85, 0.92, 1 },
+	},
+	class = { label = "My class colour" },
+}
+UI.THEME_ORDER = { "forever", "arcane", "horde", "alliance", "emerald", "classic", "midnight", "class" }
+C.header2 = { 0.10, 0.13, 0.19, 1 }
+local DEFAULT = {}
+for k, v in pairs(C) do DEFAULT[k] = { v[1], v[2], v[3], v[4] } end
+
+function UI.ApplyTheme(name)
+	local theme = UI.THEMES[name] or UI.THEMES.forever
+	for k, v in pairs(DEFAULT) do
+		local src = theme[k] or v
+		local dst = C[k]
+		dst[1], dst[2], dst[3], dst[4] = src[1], src[2], src[3], src[4]
+	end
+	if name == "class" then
+		local _, class = UnitClass("player")
+		local cc = class and (C_ClassColor and C_ClassColor.GetClassColor and C_ClassColor.GetClassColor(class) or RAID_CLASS_COLORS and RAID_CLASS_COLORS[class])
+		if cc then C.accent[1], C.accent[2], C.accent[3] = cc.r, cc.g, cc.b end
+	end
+	UI.theme = name
+end
+
+-- Appearance settings (scale and opacity of the windows), filled in by Core.lua.
+function UI.Appearance()
+	local db = ns.FC and ns.FC.db and ns.FC.db.profile.appearance
+	return db or { scale = 1, opacity = 0.96 }
+end
+
 function UI.Hex(color)
 	return string.format("ff%02x%02x%02x", color[1] * 255, color[2] * 255, color[3] * 255)
 end
@@ -404,7 +475,9 @@ function UI.Window(name, title, width, height, store, opts)
 	f:SetClampedToScreen(true)
 	f:SetMovable(true)
 	f:EnableMouse(true)
-	UI.Backdrop(f, C.bg, C.border)
+	local look = UI.Appearance()
+	UI.Backdrop(f, { C.bg[1], C.bg[2], C.bg[3], look.opacity or C.bg[4] }, C.border)
+	if look.scale and look.scale ~= 1 then f:SetScale(look.scale) end
 	f:SetSize(store and store.w or width, store and store.h or height)
 	f:SetPoint("CENTER")
 	if store and store.point then
@@ -428,12 +501,19 @@ function UI.Window(name, title, width, height, store, opts)
 	header:SetHeight(opts.headerHeight or 40)
 	local hbg = header:CreateTexture(nil, "BACKGROUND")
 	hbg:SetAllPoints()
-	UI.Gradient(hbg, { 0.10, 0.13, 0.19, 1 }, C.header)
+	UI.Gradient(hbg, C.header2, C.header)
 	local accent = UI.Fill(header, C.accent, "ARTWORK")
 	accent:SetPoint("BOTTOMLEFT")
 	accent:SetPoint("BOTTOMRIGHT")
-	accent:SetHeight(1)
-	accent:SetAlpha(0.7)
+	accent:SetHeight(2)
+	accent:SetAlpha(0.9)
+	-- soft glow of the accent colour under the header line
+	local glow = f:CreateTexture(nil, "BORDER")
+	glow:SetTexture(UI.WHITE)
+	glow:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, 0)
+	glow:SetPoint("TOPRIGHT", header, "BOTTOMRIGHT", 0, 0)
+	glow:SetHeight(26)
+	UI.Gradient(glow, { C.accent[1], C.accent[2], C.accent[3], 0.12 }, { C.accent[1], C.accent[2], C.accent[3], 0 })
 	header:EnableMouse(true)
 	header:RegisterForDrag("LeftButton")
 	header:SetScript("OnDragStart", function() f:StartMoving() end)

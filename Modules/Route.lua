@@ -14,6 +14,8 @@ local Route = ns.NewModule("Route", {
 	questLevelsAbove = 2,
 	suggestDungeons = true,
 	autoRoutes = true, -- follow the built-in leveling routes (Data\RoutesAuto.lua)
+	showUpgrades = true, -- best-in-slot items of your level to pick up, under the steps
+	routeDungeons = true, -- dungeon steps of the built-in routes (off: solo, they are skipped)
 	stepsShown = 5,
 }, {
 	recorded = {}, -- [name] = route
@@ -24,9 +26,11 @@ ns.RegisterDefaults("char", "Route", {
 	step = 1,
 	manualDone = {}, -- ["routeID:step"] = true
 	finished = {},   -- [routeID] = true
+	dungeons = {},   -- [instanceID or name] = highest level at which the character entered it
 	recording = nil, -- route being recorded
 })
 
+ns.Route = Route
 local OWNER = "route"
 
 local function CharState()
@@ -55,6 +59,9 @@ end
 -- "Zone (x, y)" for a world position (continent 0 = Eastern Kingdoms, 1 = Kalimdor).
 local CONTINENT_MAPS = { [0] = 1415, [1] = 1414 }
 function ns.WorldPlace(continent, x, y)
+	if continent and continent < 0 then
+		return string.format("%s (%.0f, %.0f)", ns.MapName(-continent), x / 100, y / 100)
+	end
 	local contMap = CONTINENT_MAPS[continent]
 	local mx, my = ns.WorldToMap(continent, x, y, contMap)
 	if mx and C_Map.GetMapInfoAtPosition then
@@ -125,7 +132,7 @@ function Assistant:Rebuild()
 	local _, _, classID = UnitClass("player")
 	local faction = UnitFactionGroup("player")
 	local side = faction == "Alliance" and 1 or faction == "Horde" and 2 or 0
-	local raceBit = raceID and raceID >= 1 and raceID <= 8 and 2 ^ (raceID - 1) or nil
+	local raceBit = ns.PlayerRaceBit()
 	local classBit = classID and 2 ^ (classID - 1)
 	local level = UnitLevel("player")
 	local s = Route:Settings()
@@ -285,6 +292,18 @@ function Route:ChooseRoute()
 	return nil
 end
 
+-- Remembers the dungeons the character entered (dungeon steps of the routes).
+function Route:NoteInstance()
+	if not (IsInInstance and IsInInstance()) then return end
+	local name, kind, _, _, _, _, _, instanceID = GetInstanceInfo()
+	if kind ~= "party" and kind ~= "raid" then return end
+	local visits = CharState().dungeons
+	if not visits then visits = {}; CharState().dungeons = visits end
+	local level = UnitLevel("player")
+	if instanceID then visits[instanceID] = math.max(visits[instanceID] or 0, level) end
+	if name and not ns.IsSecret(name) then visits[name] = math.max(visits[name] or 0, level) end
+end
+
 function Route:IsStepDone(route, index)
 	local step = route.steps[index]
 	local kind = step[1]
@@ -299,6 +318,13 @@ function Route:IsStepDone(route, index)
 		return UnitLevel("player") >= step.level
 	elseif kind == "note" and step.abandon then
 		return not InLog(step.quest)
+	elseif kind == "dungeon" then
+		if not Route:Settings().routeDungeons then return true end
+		-- done once the character has been inside at the step's level (wings of one instance share its map ID)
+		local visits = CharState().dungeons or {}
+		local seen = (step.instance and visits[step.instance]) or (step.entry and step.entry.name and visits[step.entry.name])
+		local inside = IsInInstance and IsInInstance()
+		return seen and seen >= (step.lvl or 1) - 1 and not inside or UnitLevel("player") > (step.maxLvl or 60)
 	elseif kind == "goto" and step.wx then
 		-- also done once a later quest step of the route is done (you are already there)
 		local nextStep = route.steps[index + 1]
@@ -436,7 +462,8 @@ function Route:StepText(step, short)
 	elseif kind == "level" then
 		body = string.format(L["Reach level %d"], step.level)
 	elseif kind == "dungeon" then
-		body = ns.InstanceName(step.instance)
+		body = step.entry and ns.InstanceEntryName and ns.InstanceEntryName(step.entry) or ns.InstanceName(step.instance)
+		if not short then body = body .. "\n|cffbbbbbb" .. L["Group up for this dungeon (Group Finder or /4 LookingForGroup), do its quests inside, then continue the route."] .. "|r" end
 	elseif kind == "goto" and step.zone then
 		body = string.format(L["Travel to %s"], step.zone)
 		if step.ship and not short then
@@ -482,7 +509,57 @@ local TAG = {
 	train = { L["Train"], { 0.8, 0.6, 1 } },
 	dungeon = { L["Dungeon"], C.bad },
 	note = { L["Note"], C.muted },
+	gear = { L["BiS"], { 0.75, 0.5, 1 } },
 }
+
+-- Rows of the gear upgrades of your level (best-in-slot lists of the leveling guide).
+function Route:AddUpgradeRows(f, y)
+	if not (self:Settings().showUpgrades and ns.GearUpgrades) then return y end
+	local ok, ups = pcall(ns.GearUpgrades)
+	if not ok or not ups or #ups == 0 then return y end
+	local shown = 0
+	for _, u in ipairs(ups) do
+		if u.name and shown < 2 then
+			shown = shown + 1
+			local row = f.rows:Acquire(f)
+			row.tag:Set(TAG.gear[1], TAG.gear[2])
+			row.tag:SetWidth(68)
+			row.first = false
+			local color = u.quality and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[u.quality]
+			row.titleText = u.name
+			row.title:SetText((color and color.hex and (color.hex .. u.name .. "|r") or u.name) .. UI.Colorize("  " .. u.slot, C.muted))
+			row.title:SetTextColor(0.9, 0.9, 0.9)
+			row.dist:SetText("")
+			row.bg:SetVertexColor(1, 1, 1, 0)
+			row.detail:SetText(UI.Colorize(u.inBags and L["in your bags: equip it"] or u.source or "", u.inBags and C.good or C.muted))
+			local h = 26 + row.detail:GetStringHeight() + 6
+			row:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -y)
+			row:SetPoint("RIGHT", f, "RIGHT", -10, 0)
+			row:SetHeight(h)
+			row:SetScript("OnClick", function(_, button)
+				if button == "RightButton" or not ns.GoToUpgrade(u) then ns.ToggleClassGuide("gear") end
+			end)
+			y = y + h + 2
+		end
+	end
+	if #ups > shown then
+		local row = f.rows:Acquire(f)
+		row.tag:Set("", C.muted)
+		row.tag:SetWidth(68)
+		row.first = false
+		row.titleText = string.format(L["%d more upgrades: open the gear list"], #ups - shown)
+		row.title:SetText(UI.Colorize(row.titleText, C.muted))
+		row.dist:SetText("")
+		row.detail:SetText("")
+		row.bg:SetVertexColor(1, 1, 1, 0)
+		row:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -y)
+		row:SetPoint("RIGHT", f, "RIGHT", -10, 0)
+		row:SetHeight(24)
+		row:SetScript("OnClick", function() ns.ToggleClassGuide("gear") end)
+		y = y + 26
+	end
+	return y
+end
 
 function Route:CreateWindow()
 	if self.frame then return end
@@ -689,6 +766,7 @@ function Route:UpdateWindow()
 		f.skip.tooltip = L["Mark this step as done"]
 		f.skip:Show()
 	end
+	y = self:AddUpgradeRows(f, y)
 	f.footer:ClearAllPoints()
 	f.footer:SetPoint("TOPLEFT", f, "TOPLEFT", 14, -(y + 6))
 	f.footer:SetPoint("RIGHT", f, "RIGHT", -12, 0)
@@ -820,7 +898,10 @@ function Route:OnEnable()
 	self:RegisterEvent("QUEST_LOG_UPDATE")
 	self:RegisterEvent("PLAYER_LEVEL_UP", function() C_Timer.After(0.5, function() self:Advance() end) end)
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "Advance")
-	self:RegisterEvent("ZONE_CHANGED_NEW_AREA", "Refresh")
+	self:RegisterEvent("ZONE_CHANGED_NEW_AREA", function()
+		self:NoteInstance()
+		self:Advance()
+	end)
 	self:Advance()
 	if not self.ticker then
 		self.ticker = C_Timer.NewTicker(2, function()
@@ -895,7 +976,9 @@ function Route:GetOptions()
 			questLevelsBelow = { type = "range", order = 7, name = L["Quests up to N levels below mine"], min = 0, max = 15, step = 1 },
 			questLevelsAbove = { type = "range", order = 8, name = L["Quests up to N levels above mine"], min = 0, max = 6, step = 1 },
 			suggestDungeons = { type = "toggle", order = 9, width = "full", name = L["Suggest dungeons for my level"] },
-			autoRoutes = { type = "toggle", order = 9.1, width = "full", name = L["Follow the built-in leveling route of my race (1-60)"] },
+			showUpgrades = { type = "toggle", order = 9.5, width = "full", name = L["Show the best-in-slot items of my level to pick up"] },
+			autoRoutes = { type = "toggle", order = 9.1, width = "full", name = L["Follow the built-in leveling route of my race and class (1-60)"] },
+			routeDungeons = { type = "toggle", order = 9.15, width = "full", name = L["Include the dungeons in the route (off: solo leveling, they are skipped)"] },
 			stepsShown = { type = "range", order = 9.2, name = L["Route steps listed"], min = 1, max = 10, step = 1 },
 			style = {
 				type = "select", order = 5, name = L["Route style"],
