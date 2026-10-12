@@ -15,7 +15,7 @@ Usage: lua5.1 dumpidb.lua idb.json (from the addon folder), then python3 build_i
 """
 import sys, os, json, collections
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from forever_db import load, L, lst
+from forever_db import load, L, lst, npc_points, object_points
 
 ADDON = '/mnt/project-files/addon/ForeverCompanion'
 OUT = os.path.join(ADDON, 'Data/InstanceForever.lua')
@@ -50,73 +50,121 @@ ALLI, HORDE = 77 | 1 << 32, 178 | 1 << 33
 
 
 def dungeon_quests(d):
-    """Lua lines adding/removing dungeon quests, with their DungeonQuestInfo built from the Forever database."""
+    """Lua lines rebuilding every dungeon quest list and DungeonQuestInfo from the Forever database.
+
+    Data/DungeonQuests.lua comes from CMaNGOS (Classic): race masks without the Skyborne bits, Classic givers and
+    rewards.  Each list is kept (the instance of a quest is not always its zone), cleaned of the quests Forever removed,
+    completed with the Forever quests of the instance's area (DQ_ADD for areas shared by several wings), and every
+    quest's info is rewritten from QuestieDB Forever."""
     import re
     Q, N, I, O = load('Quest'), load('Npc'), load('Item'), load('Object')
-    qdb = json.load(open(os.path.join(os.environ.get('FDB_DIR', '/tmp/claude-0/fdb'), 'questdb.json')))
-    bl = set(int(x) for x in re.findall(r'\d+', open(os.path.join(os.environ.get('FDB_DIR', '/tmp/claude-0/fdb'), 'blacklist.txt')).read()))
+    fdb = os.environ.get('FDB_DIR', '/tmp/claude-0/fdb')
+    qdb = json.load(open(os.path.join(fdb, 'questdb.json')))
+    bl = set(int(x) for x in re.findall(r'\d+', open(os.path.join(fdb, 'blacklist.txt')).read()))
+    src = open(os.path.join(ADDON, 'Data/DungeonQuests.lua')).read()
+    block = src[src.index('ns.DungeonQuests = {'):]
+    block = block[:block.index('\n}\n')]
+    lists = collections.OrderedDict((k, [int(x) for x in v.split(',') if x.strip()])
+                                    for k, v in re.findall(r'\["([^"]+)"\] = \{([^}]*)\}', block))
+    for key, qs in DQ_REMOVE.items():
+        lists[key] = [q for q in lists.get(key, []) if q not in qs]
+    # area of each instance: the zone most of its quests are filed under
+    area_of, keys_of_area = {}, collections.defaultdict(list)
+    for key, qs in lists.items():
+        c = collections.Counter(L(Q[str(q)], 17) for q in qs if str(q) in Q and (L(Q[str(q)], 17) or 0) > 0)
+        if c:
+            area_of[key] = c.most_common(1)[0][0]
+            keys_of_area[area_of[key]].append(key)
+    known = {q for qs in lists.values() for q in qs}
+    stats = collections.Counter()
+    for key in lists:
+        add = list(DQ_ADD.get(key, []))
+        a = area_of.get(key)
+        if a and len(keys_of_area[a]) == 1:
+            add += [int(q) for q, r in Q.items() if L(r, 17) == a and int(q) not in known]
+        for q in add:
+            if q not in lists[key]: lists[key].append(q); stats['added'] += 1
+    for key in lists:
+        before = len(lists[key])
+        seen = set()
+        lists[key] = [q for q in lists[key] if str(q) in Q and q not in bl and not (q in seen or seen.add(q))]
+        stats['removed'] += before - len(lists[key])
+        lists[key].sort(key=lambda q: (L(Q[str(q)], 5) or 0, L(Q[str(q)], 4) or 0, q))
     rewards = collections.defaultdict(list)
     for iid, it in I.items():
         for q in lst(L(it, 6)):
             if q: rewards[int(q)].append(int(iid))
-    lines = ['', '-- Dungeon quests: removed in Forever, then added (Forever data)',
-             'local REMOVE = { ' + ', '.join('[%s] = { %s }' % (lua_str(k), ', '.join(map(str, v))) for k, v in DQ_REMOVE.items()) + ' }',
-             'for key, ids in pairs(REMOVE) do',
-             '\tlocal l, drop = ns.DungeonQuests[key] or {}, {}',
-             '\tfor _, id in ipairs(ids) do drop[id] = true end',
-             '\tfor i = #l, 1, -1 do if drop[l[i]] then table.remove(l, i) end end',
-             'end']
-    for key, qs in DQ_ADD.items():
+
+    def first_point(pts, area):
+        if not pts: return None
+        return pts[0]
+
+    def who(spec, pos, area):
+        spec = lst(spec) + [None, None, None]
+        npcs = [n for n in lst(spec[0]) if n] if spec[0] else []
+        objs = [n for n in lst(spec[1]) if n] if spec[1] else []
+        items = [n for n in lst(spec[2]) if n] if spec[2] else []
+        if npcs and str(npcs[0]) in N:
+            name, row = L(N[str(npcs[0])], 1), N[str(npcs[0])]
+            inside = 1 if area and L(row, 9) == area else 0
+            pos = pos or first_point(npc_points(npcs[0]), area)
+        elif objs and str(objs[0]) in O:
+            name, row = L(O[str(objs[0])], 1), O[str(objs[0])]
+            inside = 1 if area and L(row, 6) == area else 0
+            pos = pos or first_point(object_points(objs[0]), area)
+        elif items and str(items[0]) in I:
+            return '{ %s, nil, nil, nil, 1, %d }' % (lua_str(L(I[str(items[0])], 1)), items[0])
+        else:
+            return 'nil'
+        if pos:
+            return '{ %s, %d, %d, %d, %d }' % (lua_str(name), pos[0], pos[1], pos[2], inside)
+        return '{ %s, nil, nil, nil, %d }' % (lua_str(name), inside)
+
+    lines = ['', '-- Dungeon quests rebuilt from the Forever database (lists and info); new Forever dungeons keep their own lists']
+    for key, qs in lists.items():
+        lines.append('ns.DungeonQuests[%s] = { %s }' % (lua_str(key), ', '.join(map(str, qs))))
+    done = set()
+    for key, qs in lists.items():
+        area = area_of.get(key)
         for q in qs:
-            if q in bl: raise SystemExit('blacklisted quest %d' % q)
+            if q in done: continue
+            done.add(q)
             r = Q[str(q)]
             info = qdb.get(str(q))
             races = L(r, 6, 0) or 0
             side = 1 if races and not races & HORDE else 2 if races and not races & ALLI else 0
-            st = lst(L(r, 2) or {}) + [None, None, None]
-            def who(lst3, pos):
-                npcs = [n for n in lst(lst3[0]) if n] if lst3[0] else []
-                objs = [n for n in lst(lst3[1]) if n] if lst3[1] else []
-                items = [n for n in lst(lst3[2]) if n] if len(lst3) > 2 and lst3[2] else []
-                if npcs:
-                    name = L(N[str(npcs[0])], 1)
-                elif objs:
-                    name = L(O[str(objs[0])], 1)
-                elif items:
-                    return '{ %s, nil, nil, nil, 1, %d }' % (lua_str(L(I[str(items[0])], 1)), items[0])
-                else:
-                    return 'nil'
-                if pos and pos[0] >= 0:
-                    return '{ %s, %d, %d, %d, 0 }' % (lua_str(name), pos[0], pos[1], pos[2])
-                if pos:
-                    return '{ %s, %d, %d, %d, 0 }' % (lua_str(name), pos[0], pos[1], pos[2])
-                return '{ %s }' % lua_str(name)
-            giver = who(st, info and info.get('s'))
-            fin = lst(L(r, 3) or {}) + [None, None]
-            turnin = who(fin, info and info.get('e'))
+            giver = who(L(r, 2) or {}, info and info.get('s'), area)
+            turnin = who(L(r, 3) or {}, info and info.get('e'), area)
             obj = L(r, 10) or {}
+            text = ' '.join(x for x in lst(L(r, 8)) if x)
             kills = []
             for c in lst(obj.get('1')):
                 c = lst(c)
                 if c and str(c[0]) in N:
                     name = L(N[str(c[0])], 1)
-                    m = re.search(r'(\d+)\s+' + re.escape(name), ' '.join(x for x in lst(L(r, 8)) if x))
+                    m = re.search(r'(\d+)\s+' + re.escape(name), text)
                     kills += [lua_str(name), m.group(1) if m else '1']
             items = []
             for c in lst(obj.get('3')):
                 c = lst(c)
                 if c and c[0]: items += [str(c[0]), str(c[1] if len(c) > 1 and c[1] else 1)]
-            text = ' '.join(x for x in lst(L(r, 8)) if x)
             rw = sorted(rewards.get(q, []))
+            pre = [x for x in lst(L(r, 12)) if x] or [x for x in lst(L(r, 13)) if x] or [0]
             parts = [lua_str(L(r, 1)), str(L(r, 5) or 0), str(L(r, 4) or 0), str(side), str(races), str(L(r, 7, 0) or 0),
-                     str(max(lst(L(r, 12)) or [0]) or (lst(L(r, 13)) or [0])[0] or 0),
-                     'giver = ' + giver, 'turnin = ' + turnin, 'objectives = ' + lua_str(text)]
+                     str(pre[0]), 'giver = ' + giver, 'turnin = ' + turnin, 'objectives = ' + lua_str(text)]
             if items: parts.append('items = { %s }' % ', '.join(items))
             if kills: parts.append('kills = { %s }' % ', '.join(kills))
-            if rw: parts.append('%s = { %s }' % ('choice' if len(rw) > 1 else 'reward', ', '.join('%d, 1' % i for i in rw)))
+            prev_rw = re.search(r'\n\t\[%d\] = \{.*?((?:choice|reward) = \{ [^}]*\}(?:, (?:choice|reward) = \{ [^}]*\})?)' % q, src)
+            if prev_rw and sorted(int(x) for x in re.findall(r'(\d+), \d+', prev_rw.group(1))) == rw:
+                parts.append(prev_rw.group(1))   # same items: keep the Classic counts (QuestieDB has none)
+            elif rw:
+                parts.append('%s = { %s }' % ('choice' if len(rw) > 1 else 'reward', ', '.join('%d, 1' % i for i in rw)))
+            old = re.search(r'\n\t\[%d\] = \{.*?(money = \d+).*?\},?\n' % q, src)
+            if old: parts.append(old.group(1))
+            grp = re.search(r'\n\t\[%d\] = \{.*?(group = \d+).*?\},?\n' % q, src)
+            if grp: parts.append(grp.group(1))
             lines.append('ns.DungeonQuestInfo[%d] = { %s }' % (q, ', '.join(parts)))
-        lines.append('do local l = ns.DungeonQuests[%s] if l then for _, id in ipairs({ %s }) do if not tContains(l, id) then l[#l + 1] = id end end end end'
-                     % (lua_str(key), ', '.join(map(str, qs))))
+    print('dungeon quests:', sum(len(v) for v in lists.values()), dict(stats))
     return lines + ['']
 
 

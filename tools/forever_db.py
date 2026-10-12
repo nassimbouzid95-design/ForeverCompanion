@@ -109,30 +109,67 @@ def to_world(zone, x, y):
     return None
 
 
-def npc_points(npc_id):
-    n = load('Npc').get(str(npc_id))
+def dungeon_entrances():
+    """Dungeon AreaID (and its alternative IDs) -> world point of its entrance (support/Forever/Zones/dungeons.lua)."""
+    if 'dent' in _cache: return _cache['dent']
+    import re
+    out = {}
+    txt = open(os.path.join(QDB_REPO, 'support/Forever/Zones/dungeons.lua')).read()
+    for m in re.finditer(r'\[(\d+)\] = \{"[^"]+",(nil|\{[\d,]*\}),(\d+),\{\{(\d+), ([\d.]+), ([\d.]+)\}', txt):
+        w = to_world(int(m.group(4)), float(m.group(5)), float(m.group(6)))
+        if not w: continue
+        ids = [int(m.group(1))] + [int(x) for x in re.findall(r'\d+', m.group(2))]
+        for a in ids: out.setdefault(a, w)
+    _cache['dent'] = out
+    return out
+
+
+def _points(spawns):
+    """World points of Questie spawns; a creature or object inside a dungeon (-1, -1) is placed at its entrance."""
     out = []
-    if not n: return out
-    for z, pts in (L(n, 7) or {}).items():
+    for z, pts in (spawns or {}).items():
         for p in lst(pts):
             p = lst(p)
-            if p and p[0] is not None and p[0] >= 0:
+            if not p or p[0] is None: continue
+            if p[0] >= 0:
                 w = to_world(z, p[0], p[1])
                 if w: out.append(w)
+            elif int(z) in dungeon_entrances():
+                w = dungeon_entrances()[int(z)]
+                if w not in out: out.append(w)
     return out
+
+
+def inside_dungeon(spawns):
+    """Dungeon AreaID when every spawn is inside a dungeon (Questie -1, -1 in a dungeon zone), else None."""
+    areas = set()
+    for z, pts in (spawns or {}).items():
+        for p in lst(pts):
+            p = lst(p)
+            if not p or p[0] is None: continue
+            if p[0] >= 0 or int(z) not in dungeon_entrances(): return None
+            areas.add(int(z))
+    return min(areas) if areas else None
+
+
+def npc_dungeon(npc_id):
+    n = load('Npc').get(str(npc_id))
+    return inside_dungeon(L(n, 7)) if n else None
+
+
+def object_dungeon(obj_id):
+    o = load('Object').get(str(obj_id))
+    return inside_dungeon(L(o, 4)) if o else None
+
+
+def npc_points(npc_id):
+    n = load('Npc').get(str(npc_id))
+    return _points(L(n, 7)) if n else []
 
 
 def object_points(obj_id):
     o = load('Object').get(str(obj_id))
-    out = []
-    if not o: return out
-    for z, pts in (L(o, 4) or {}).items():
-        for p in lst(pts):
-            p = lst(p)
-            if p and p[0] is not None and p[0] >= 0:
-                w = to_world(z, p[0], p[1])
-                if w: out.append(w)
-    return out
+    return _points(L(o, 4)) if o else []
 
 
 if __name__ == '__main__':

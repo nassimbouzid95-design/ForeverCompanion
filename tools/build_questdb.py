@@ -76,6 +76,28 @@ def ender_points(q):
     return pts
 
 
+def objective_dungeon(q):
+    """Dungeon AreaID of a quest whose objectives (creatures, objects, item sources) are only inside a dungeon."""
+    o = F.L(q, 10) or {}
+    for e in F.lst(o.get('1')) + [[F.lst(x)[1]] if len(F.lst(x)) > 1 else None for x in F.lst(o.get('5'))]:
+        e = F.lst(e)
+        if e and e[0]:
+            d = F.npc_dungeon(e[0])
+            if d: return d
+    for e in F.lst(o.get('2')):
+        e = F.lst(e)
+        if e and e[0]:
+            d = F.object_dungeon(e[0])
+            if d: return d
+    for e in F.lst(o.get('3')):
+        e = F.lst(e)
+        it = e and e[0] and F.load('Item').get(str(e[0]))
+        if not it: continue
+        srcs = [F.npc_dungeon(n) for n in F.lst(F.L(it, 2)) if n] + [F.object_dungeon(x) for x in F.lst(F.L(it, 3)) if x]
+        if srcs and all(srcs): return srcs[0]
+    return None
+
+
 def objective_points(q):
     o = F.L(q, 10) or {}
     pts = []
@@ -165,7 +187,7 @@ def build():
                          prev=prev, side=side_of(q, starter_npcs, races), title=F.L(q, 1, ''), s=s or e, e=e or s,
                          o=objective_points(q), excl=first(F.L(q, 16)),
                          pre_all=[x for x in group if x], pre_any=[x for x in pre if x],
-                         gn=who(F.L(q, 2)), en=who(F.L(q, 3)))
+                         gn=who(F.L(q, 2)), en=who(F.L(q, 3)), dz=objective_dungeon(q))
         stats['quests'] += 1
         if (s or e)[0] < 0: stats['map coordinates (new zones)'] += 1
     print(dict(stats), file=sys.stderr)

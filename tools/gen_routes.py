@@ -121,18 +121,16 @@ def work(qid):
 
 # dungeons: key -> instance step id, entrance (world), levels to run, side
 def dungeon_quests():
+    """Instance key -> quest IDs, as the addon ends up with them (InstanceForever.lua rewrites the Classic lists)."""
     dq = collections.defaultdict(list)
-    for path in ('Data/DungeonQuests.lua', 'Data/ForeverDungeons.lua', 'Data/InstanceForever.lua'):
+    for path in ('Data/DungeonQuests.lua', 'Data/ForeverDungeons.lua'):
         txt = open(os.path.join(ADDON, path)).read()
         for m in re.finditer(r'\["([^"]+)"\] = \{ ([\d, ]+) \}', txt):
             dq[m.group(1)] += [int(x) for x in m.group(2).split(',')]
-        for m in re.finditer(r'ns\.DungeonQuests\["([^"]+)"\]\s*=\s*\{ ([\d, ]+) \}', txt):
-            dq[m.group(1)] += [int(x) for x in m.group(2).split(',')]
         for m in re.finditer(r'DungeonQuests\["([^"]+)"\] if l then for _, id in ipairs\(\{ ([\d, ]+) \}\)', txt):
             dq[m.group(1)] += [int(x) for x in m.group(2).split(',')]
-    for m in re.finditer(r'"Gnomeregan"\] = \{ ([\d, ]+) \}', open(os.path.join(ADDON, 'Data/InstanceForever.lua')).read()):
-        drop = set(int(x) for x in m.group(1).split(','))
-        dq['Gnomeregan'] = [q for q in dq['Gnomeregan'] if q not in drop]
+    for m in re.finditer(r'ns\.DungeonQuests\["([^"]+)"\] = \{ ([\d, ]+) \}', open(os.path.join(ADDON, 'Data/InstanceForever.lua')).read()):
+        dq[m.group(1)] = [int(x) for x in m.group(2).split(',')]
     return dq
 DQ = dungeon_quests()
 
@@ -177,6 +175,18 @@ DUNGEON_AREA = {k: area for k, inst, area, lv, side, nb in DUNGEONS}
 DQ_OF = {}
 for k, *_ in DUNGEON_LIST:
     for q in DQ.get(k, []): DQ_OF.setdefault(q, k)
+# quests whose objectives are only inside a dungeon: done in that dungeon, never solo at its entrance
+_AREA_KEY = {}
+for k, inst, area, lv, side, nb in DUNGEONS: _AREA_KEY.setdefault(area, k)
+_ALT = {}
+for m in re.finditer(r'\[(\d+)\] = \{"[^"]+",\{([\d,]*)\}', open(os.path.join(QDB_REPO, 'support/Forever/Zones/dungeons.lua')).read()):
+    for a in re.findall(r'\d+', m.group(2)): _ALT[int(a)] = int(m.group(1))
+for qid, q in list(QDB.items()):
+    dz = q.get('dz')
+    if not dz or qid in DQ_OF: continue
+    key = _AREA_KEY.get(_ALT.get(dz, dz))
+    if key and key in DUNGEON_BY_KEY: DQ_OF[qid] = key
+    else: del QDB[qid]
 
 # ---------------------------------------------------------------------------------------------------------------
 # movement
@@ -359,7 +369,8 @@ class Sim:
                 if qid in self.done_obj or not QDB[qid]['o'] and qid not in DQ_OF and not QINFO[qid]['kills'] and not QINFO[qid]['inter']:
                     e = QDB[qid]['e']
                     t = PORTAL if self.pos and self.pos[0] in CLOSED_MAPS and e[0] != self.pos[0] and QDB[qid]['s'][0] == self.pos[0] else travel(self.pos, e, self.level)
-                    acts.append((t - 30, 'turnin', qid, e))
+                    # far turn-ins wait (tw > 1): the objectives nearby get done first, then everything is handed in together
+                    acts.append((t - 30 if t < 150 else t * P['tw'] - 30, 'turnin', qid, e))
                 elif qid not in DQ_OF:
                     o = min(QDB[qid]['o'] or [QDB[qid]['s']], key=lambda p: travel(self.pos, p, self.level))
                     acts.append((travel(self.pos, o, self.level), 'complete', qid, o))
@@ -423,7 +434,7 @@ class Sim:
 
 # dungeon_factor: a dungeon goes in the route when it levels at least 75 % as fast as questing at that point; its
 # loot (best-in-slot items of that level) and its quests make up for the rest, so it is not tuned away.
-DEFAULT = dict(lead=3, grey=5, min_rate=0.6, chain=0.5, goto=240, dungeons=True, dungeon_factor=0.75,
+DEFAULT = dict(lead=3, grey=5, min_rate=0.6, chain=0.5, tw=1.0, goto=240, dungeons=True, dungeon_factor=0.75,
                run_base=1500, run_boss=240, group_xp=1.0, lfg=600)
 
 
@@ -435,7 +446,7 @@ def tune(start, cls, base=DEFAULT):
     """Coordinate search on the route parameters: keeps any change that shortens the simulated 1-60."""
     best_p = dict(base)
     best = simulate(start, cls, best_p)
-    grid = dict(lead=[2, 3, 4, 5, 6], grey=[3, 4, 5, 6, 7, 8], min_rate=[0.3, 0.45, 0.6, 0.8, 1.0, 1.3], chain=[0, 0.5, 1, 1.5])
+    grid = dict(lead=[2, 3, 4, 5, 6], grey=[3, 4, 5, 6, 7, 8], min_rate=[0.3, 0.45, 0.6, 0.8, 1.0, 1.3], chain=[0, 0.5, 1, 1.5], tw=[1.0, 1.5, 2.0, 3.0, 5.0])
     tried = 1
     for _round in range(3):
         improved = False
@@ -542,6 +553,7 @@ def pack(sim):
         else:
             out.append(c)
     merged = out
+    if merged and sim.level >= 60: merged[-1]['max'] = 60
     return merged
 
 
