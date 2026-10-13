@@ -94,6 +94,6 @@ taux de drop, rerolls, sacs, carte, campements, interface et sécurité.
 
 GPL v3 (voir `LICENSE`), à cause des données reprises d'AtlasLootClassic et de CMaNGOS.
 
-Exception : la partie des routes de leveling reprise des guides RestedXP (niveaux 1 à environ 22 dans `Data/RoutesAuto.lua`,
-) reste sous licence **CC BY-NC-SA 4.0** de ses auteurs (RestedXP) :
+Exception : la partie des routes de leveling reprise des guides RestedXP (niveaux 1 à environ 22 dans `Data/RoutesAuto.lua`)
+reste sous licence **CC BY-NC-SA 4.0** de ses auteurs (RestedXP) :
 crédit obligatoire, usage non commercial uniquement, partage dans les mêmes conditions.
