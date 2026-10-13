@@ -729,3 +729,7 @@ L["Take the airship to %s"] = "Отправляйтесь на дирижабл�
 
 -- new
 L["%s passed: it needs %s first, not done."] = "%s пропущено: сначала нужно %s, не выполнено."
+
+-- new
+L["Back to the route list"] = "Назад к списку маршрутов"
+L["Right-click: see all its steps"] = "Правый щелчок: показать все шаги"

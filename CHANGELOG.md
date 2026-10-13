@@ -1,5 +1,9 @@
 # ForeverCompanion
 
+## v2.5.2
+
+- /fc lvl > Leveling route: right-click a zone to see every step of it (quest, level, quest ID, NPC to talk to and place), to check a route before playing it. Click the first line to go back.
+
 ## v2.5.1
 
 - Quest requirements checked: a quest that needs a previous quest (all of a list, or one of several) is no longer shown to accept until that quest is turned in. When the route reaches a quest whose previous quest was passed, it passes it too and says in the chat which quest was missing (example: Aggressive Encroachment needs Aetheen of the Gales).

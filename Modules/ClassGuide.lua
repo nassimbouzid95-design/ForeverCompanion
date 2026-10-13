@@ -290,13 +290,63 @@ function Guide:Routes()
 	return list
 end
 
+-- Every step of one route, to check it before playing it (right-click on a route).
+local STEP_COLOR = {
+	accept = "ffffd100", complete = "ff66ccff", turnin = "ff33ff33", ["goto"] = "ffffffff", level = "ffff9933",
+	dungeon = "ffff6666", note = "ffaaaaaa", train = "ffcc99ff",
+}
+function Guide:PageRouteSteps(route)
+	local Route = ns.FC:GetModule("Route", true)
+	local state = ns.FC.db.char.Route
+	local isCurrent = Route and Route.route == route
+	self:Section(string.format("%s  ·  %s", route.name or route.id, string.format(L["Levels %d-%d"], route.minLevel, route.maxLevel)))
+	self:Row({
+		icon = "Interface\\Icons\\INV_Misc_Map_01",
+		title = L["Back to the route list"],
+		info = string.format(L["%d steps"], #route.steps),
+		onClick = function() self.viewRoute = nil; self:Render() end,
+	})
+	self.stack:Space(4)
+	local lines = {}
+	local function flush()
+		if #lines > 0 then self:Text(table.concat(lines, "\n"), 11, C.text, 1) end
+		wipe(lines)
+	end
+	for i, step in ipairs(route.steps) do
+		local kind = step[1]
+		local label = Route and Route.KindLabel and Route.KindLabel(kind) or kind
+		local text = string.format("|cff888888%3d|r  |c%s%s|r  %s", i, STEP_COLOR[kind] or "ffffffff", label,
+			Route and Route:StepText(step, true) or "")
+		if step.quest then
+			local q = ns.QuestDB and ns.QuestDB[step.quest]
+			if q and q[1] and q[1] > 0 then text = text .. UI.Colorize(string.format(" [%d]", q[1]), C.muted) end
+			text = text .. UI.Colorize(" #" .. step.quest, C.muted)
+		end
+		if step.npc and (kind == "accept" or kind == "turnin") then text = text .. "  ·  " .. UI.Colorize(step.npc, C.gold) end
+		local place
+		if step.map and step.x then
+			place = string.format("%s (%.0f, %.0f)", ns.MapName(step.map), step.x * 100, step.y * 100)
+		elseif step.wx and ns.WorldPlace then
+			place = ns.WorldPlace(step.cont, step.wx, step.wy)
+		end
+		if place then text = text .. "  ·  " .. UI.Colorize(place, C.muted) end
+		if isCurrent and i < state.step then text = "|TInterface\\RaidFrame\\ReadyCheck-Ready:11|t " .. text
+		elseif isCurrent and i == state.step then text = UI.Colorize("> ", C.accent) .. text end
+		lines[#lines + 1] = text
+		if #lines >= 20 then flush() end
+	end
+	flush()
+end
+
 function Guide:PageRoute()
 	local Route = ns.FC:GetModule("Route", true)
+	if self.viewRoute then return self:PageRouteSteps(self.viewRoute) end
 	local list = self:Routes()
 	local state = ns.FC.db.char.Route
 	local current = Route and Route.route
 	self:Section(L["Your route from 1 to 60"])
 	self:Text(L["The step window follows this route on its own: it moves to the next step when you accept, finish or turn in a quest, and the arrow points to each step. Click a zone to start from there."], 12, C.muted, 2)
+	self:Text(L["Right-click: see all its steps"], 12, C.muted, 2)
 	if #list == 0 then
 		self:Text(L["No built-in route for your race and class yet."], 13, C.muted, 10)
 		return
@@ -322,8 +372,14 @@ function Guide:PageRoute()
 			value = value,
 			marked = isCurrent,
 			markColor = C.accent,
-			hint = L["Click: follow the route from here"],
-			onClick = function()
+			hint = L["Click: follow the route from here"] .. "\n" .. L["Right-click: see all its steps"],
+			onClick = function(_, button)
+				if button == "RightButton" then
+					self.viewRoute = route
+					self:Render()
+					self.frame.scroll:ScrollToTop()
+					return
+				end
 				state.routeID, state.step = route.id, 1
 				state.finished[route.id] = nil
 				state.routeMode = "follow"

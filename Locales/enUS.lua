@@ -729,3 +729,7 @@ L["Take the airship to %s"] = true
 
 -- new
 L["%s passed: it needs %s first, not done."] = true
+
+-- new
+L["Back to the route list"] = true
+L["Right-click: see all its steps"] = true

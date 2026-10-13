@@ -617,6 +617,8 @@ local KIND_LABEL = {
 	dungeon = L["Dungeon"],
 	note = L["Note"],
 }
+function Route.KindLabel(kind) return KIND_LABEL[kind] or kind end
+
 local KIND_COLOR = {
 	["goto"] = "ffffffff", accept = "ffffd100", complete = "ff66ccff", turnin = "ff33ff33",
 	level = "ffff9933", train = "ffcc99ff", dungeon = "ffff6666", note = "ffaaaaaa",

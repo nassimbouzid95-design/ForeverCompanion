@@ -729,3 +729,7 @@ L["Take the airship to %s"] = "Prendi l'aeronave per %s"
 
 -- new
 L["%s passed: it needs %s first, not done."] = "%s saltata: richiede prima %s, non completata."
+
+-- new
+L["Back to the route list"] = "Torna all'elenco dei percorsi"
+L["Right-click: see all its steps"] = "Clic destro: vedi tutti i passaggi"
