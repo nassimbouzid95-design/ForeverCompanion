@@ -1,5 +1,13 @@
 # ForeverCompanion
 
+## v2.5.3
+
+- Routes checked against tested leveling guides, quest by quest, for levels 1 to 22, and corrected:
+  - Orcs, Trolls and Tauren no longer take the boat to Tirisfal Glades at level 3-4: they level in Durotar or Mulgore up to 12, like every guide. No route crosses the sea before level 10.
+  - Every route now does its starting zone fully (all its quests) before moving on: Durotar, Mulgore, Tirisfal Glades up to 12, Elwynn Forest, Dun Morogh, Teldrassil up to 11, Zephras Isle up to 12.
+  - 20 quests the database refused to some races although they get them in game are now offered (Elwynn Forest chain from Rascally Rodents for Humans, Skyborne class quests...).
+  - A route chapter that ends with dungeons now shows the right levels.
+
 ## v2.5.2
 
 - /fc lvl > Leveling route: right-click a zone to see every step of it (quest, level, quest ID, NPC to talk to and place), to check a route before playing it. Click the first line to go back.

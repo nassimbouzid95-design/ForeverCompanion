@@ -42,6 +42,12 @@ STARTS = [
     ('skyborne-h', 'Horde', ['Skyborne'], ['SkyborneH'], None),
 ]
 CLASSES = list(CLASS_BIT)
+# Home zones done first, as every tested leveling guide does (RestedXP, Questie zones): the starting zone and its
+# valley, plus the capital, until this level.  The simulator alone sometimes walked or sailed away at level 3-4.
+CAPITALS = {1637, 1638, 1497, 1519, 1537, 1657}
+HOME = {'orc': ({14, 363}, 12), 'tauren': ({215, 220}, 12), 'undead': ({85, 154}, 12), 'human': ({12, 9}, 11),
+        'dwarf': ({1, 132}, 11), 'nightelf': ({141, 188}, 11), 'skyborne-a': ({16593}, 12), 'skyborne-h': ({16593}, 12)}
+HOME_RATE = 0.01  # at home every quest that gives experience is done (the leveling guides do them all)
 
 # ---------------------------------------------------------------------------------------------------------------
 # data
@@ -205,7 +211,8 @@ CLOSED_MAPS = set()
 # Bluff (Horde), and back.  Docks: the givers of the two quests that send you off the isle, and where they end.
 ZEPHRAS = -2521
 AIRSHIPS = {1: ((ZEPHRAS, 6659, 7992), (0, 450, 437)), 2: ((ZEPHRAS, 5915, 7973), (1, -656, 424))}
-AIRSHIP_TIME = 200      # waiting for it and the flight
+AIRSHIP_TIME = 200
+SHIP_MIN_LEVEL = 10      # waiting for it and the flight
 AIRSHIP = [AIRSHIPS[1]]  # set by Sim() for its faction
 
 def travel(a, b, level):
@@ -216,6 +223,7 @@ def travel(a, b, level):
         return travel(a, land, level) + AIRSHIP_TIME + travel(dock, b, level)
     if a[0] != b[0]:
         if a[0] in CLOSED_MAPS: return 1e6
+        if level < SHIP_MIN_LEVEL: return 1e6   # no leveling guide crosses the sea before 10: the home zones are done first
         if b[0] < 0 and b[0] not in OPEN_MAPS.get(a[0], ()): return 1e6   # cannot walk to Zephras Isle
         return PORTAL if a[0] < 0 or b[0] < 0 else SHIP
     d = math.hypot(a[1] - b[1], a[2] - b[2]) * (SEPARATE_SCALE if a[0] < 0 else 1)
@@ -316,6 +324,12 @@ class Sim:
     def worthwhile(self, qid):
         q = QDB[qid]; qi = QINFO[qid]
         if q['classes']: return True   # class quests: spells, pets, forms
+        home = HOME.get(self.key)
+        in_home = False
+        if home and self.level < home[1]:
+            zone = L(Q.get(str(qid), {}), 17)
+            if zone and zone > 0 and zone not in home[0] and zone not in CAPITALS: return False
+            in_home = True
         if qi['elite']: return False
         if qid in DQ_OF:
             d = DUNGEON_BY_KEY.get(DQ_OF[qid])
@@ -326,10 +340,12 @@ class Sim:
         # leave: from this level on, no more new quests of the starting zone (go on to the next zones)
         if self.level >= self.P['leave'] and self.in_start_area(q['s']): return False
         ql = q['lvl'] if q['lvl'] > 0 else self.level
-        if ql > self.level + (2 if self.level < 10 else self.P['lead']): return False
+        if ql > self.level + (3 if self.level < 10 else self.P['lead']): return False
         if ql < self.level - self.P['grey']: return False
-        rate = self.value(qid) / max(self.cost(qid), 1)
-        return rate >= self.P['min_rate'] * grind_rate(self.level)
+        # the trip to the giver counts too (half: several quests share it), so a boat is not taken for one small quest
+        rate = self.value(qid) / max(self.cost(qid) + self.P['reach'] * travel(self.pos, q['s'], self.level), 1)
+        # at home every quest of the zone is worth doing (a guide does them all), elsewhere only the good ones
+        return rate >= (HOME_RATE if in_home else self.P['min_rate']) * grind_rate(self.level)
 
     # -- experience --------------------------------------------------------------------------------------------
     def gain(self, amount):
@@ -459,7 +475,7 @@ class Sim:
 
 # dungeon_factor: a dungeon goes in the route when it levels at least 75 % as fast as questing at that point; its
 # loot (best-in-slot items of that level) and its quests make up for the rest, so it is not tuned away.
-DEFAULT = dict(leave=99, lead=3, grey=5, min_rate=0.6, chain=0.5, tw=1.0, goto=240, dungeons=True, dungeon_factor=0.75,
+DEFAULT = dict(reach=0.5, leave=99, lead=3, grey=5, min_rate=0.6, chain=0.5, tw=1.0, goto=240, dungeons=True, dungeon_factor=0.75,
                run_base=1500, run_boss=240, group_xp=1.0, lfg=600)
 
 
@@ -584,6 +600,9 @@ def pack(sim):
         else:
             out.append(c)
     merged = out
+    # a chapter that ends with dungeons levels past its last quest: it reaches the level the next chapter starts at
+    for a_, b_ in zip(merged, merged[1:]):
+        if b_['min'] > a_['max'] + 1: a_['max'] = b_['min'] - 1
     if merged and sim.level >= 60: merged[-1]['max'] = 60
     return merged
 

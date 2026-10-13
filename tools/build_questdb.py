@@ -159,6 +159,9 @@ def first(v):
     return v[0] if v else 0
 
 
+RACE_FIXES = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'v2-data', 'race_fixes.json')))
+
+
 def build():
     Q = F.load('Quest')
     skip = excluded()
@@ -183,6 +186,8 @@ def build():
         # Questie gives some Zephras Isle quests the Alliance Skyborne bit only while Horde Skyborne need them for their
         # chains (both factions share the island): a mask of Skyborne bits only means both Skyborne.
         if races in (1 << 32, 1 << 33): races = 3 << 32
+        # races Questie leaves out although the quest is offered to them in game (seen in tested leveling guides)
+        if races and str(qid) in RACE_FIXES: races |= RACE_FIXES[str(qid)]
         rows[qid] = dict(lvl=F.L(q, 5, 0) or 0, min=F.L(q, 4, 0) or 0, races=races, classes=F.L(q, 7, 0) or 0,
                          prev=prev, side=side_of(q, starter_npcs, races), title=F.L(q, 1, ''), s=s or e, e=e or s,
                          o=objective_points(q), excl=first(F.L(q, 16)),
