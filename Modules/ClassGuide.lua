@@ -20,6 +20,7 @@ local TABS = {
 	{ key = "talents", label = "Talents" },
 	{ key = "spells", label = "Spells" },
 	{ key = "rotation", label = "Rotation" },
+	{ key = "prof", label = "Professions" },
 }
 
 local SLOTS = {
@@ -210,7 +211,7 @@ function Guide:CreateWindow()
 	f.tabs = {}
 	local prev
 	for _, tab in ipairs(TABS) do
-		local b = UI.Button(tabs, L[tab.label], 150, 30, "normal", function() self.tab = tab.key self.frame.scroll:ScrollToTop() self:Render() end)
+		local b = UI.Button(tabs, L[tab.label], 140, 30, "normal", function() self.tab = tab.key self.frame.scroll:ScrollToTop() self:Render() end)
 		if prev then b:SetPoint("LEFT", prev, "RIGHT", 6, 0) else b:SetPoint("LEFT") end
 		if b.FitText then b:FitText(110) end
 		f.tabs[tab.key] = b
@@ -759,7 +760,9 @@ function Guide:Render()
 	elseif self.tab == "talents" then self:PageTalents()
 	elseif self.tab == "spells" then self:PageSpells()
 	elseif self.tab == "rotation" then self:PageRotation()
+	elseif self.tab == "prof" and ns.ProfessionGuide then ns.ProfessionGuide.Page(self)
 	else self:PageRoute() end
+	if self.tab ~= "prof" and ns.ProfessionGuide then ns.ProfessionGuide.HideButtons(self) end
 	self.frame.scroll:SetContentHeight(self.stack.y + 24)
 	self.frame.subtitle:SetText("")
 end
@@ -828,7 +831,7 @@ function Guide:OnDisable()
 	if self.frame then self.frame:Hide() end
 end
 
-ns.RegisterCommand("lvl", L["leveling guide: route | gear | talents | spells | rotation"], function(rest)
+ns.RegisterCommand("lvl", L["leveling guide: route | gear | talents | spells | rotation | prof"], function(rest)
 	local tab = (rest or ""):match("^(%S+)")
 	ns.ToggleClassGuide(tab and tab:lower() or nil)
 end)

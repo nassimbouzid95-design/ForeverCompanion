@@ -40,6 +40,7 @@ Data\Routes.lua
 Data\RoutesAuto.lua
 Data\ClassGuide.lua
 Data\GearGuide.lua
+Data\Professions.lua
 
 Modules\Leveling.lua
 Modules\Arrow.lua
@@ -51,6 +52,7 @@ Modules\Bags.lua
 Modules\LootCollector.lua
 Modules\DungeonGuide.lua
 Modules\ClassGuide.lua
+Modules\ProfessionGuide.lua
 Modules\Economy.lua
 Modules\PvP.lua
 Modules\Interface.lua

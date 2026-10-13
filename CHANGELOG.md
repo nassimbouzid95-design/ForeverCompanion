@@ -1,5 +1,14 @@
 # ForeverCompanion
 
+## v2.7.0
+
+- New Professions tab in the leveling guide (/fc lvl prof, or Professions in the minimap menu):
+  - The best profession pairs for your class (Skinning + Leatherworking, Mining + Blacksmithing or Engineering, Herbalism + Alchemy, Tailoring + Enchanting...) and why they go together.
+  - Leveling plan from 1 to 300 for Alchemy, Blacksmithing, Enchanting, Engineering, Leatherworking, Tailoring, Cooking and First Aid: the cheapest recipe for each skill range, how many to craft, the materials and an estimated cost. Your current step is highlighted and the materials still needed from your skill are added up.
+  - Recipes come from the trainers; when a vendor recipe is cheaper, the vendor and its place are shown for your faction. Recipes with a cooldown or a reputation requirement are left out.
+  - Mining, Herbalism and Skinning: what to gather at each skill level and the zones to do it.
+  - Trainer ranks (Journeyman, Expert, Artisan) with the level they need.
+
 ## v2.6.0
 
 - Levels 1 to about 22: the leveling routes now follow the RestedXP Forever guides step by step, in their order, with quests grouped the way they do (accept everything around, do the objectives together, hand everything in at once). Credit: RXPGuides by RestedXP (https://github.com/RestedXP/RXPGuides), CC BY-NC-SA 4.0; that part of the routes keeps this licence.

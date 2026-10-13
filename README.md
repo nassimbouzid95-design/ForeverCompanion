@@ -20,7 +20,7 @@ taux de drop, rerolls, sacs, carte, campements, interface et sécurité.
 | --- | --- |
 | Montée 1-60 | Fenêtre d'XP : XP/heure, temps avant le niveau, repos, XP des quêtes prêtes à rendre. Acceptation et rendu automatiques des quêtes en option (Maj pour ignorer). |
 | Route d'XP | Assistant de quêtes : les prochaines quêtes à prendre, faire et rendre selon race, faction, classe et niveau, la plus proche d'abord, avec la flèche dessus. Donjons conseillés pour ton niveau. Routes écrites étape par étape et enregistreur de route. |
-| Guide de leveling | Façon RestedXP : route intégrée de 1 à 60 optimisée pour ta race et ta classe avec les nouvelles quêtes de Forever et les donjons à faire au bon niveau (prendre, faire, rendre, voyager), rappel quand un objet BiS de ton niveau est à récupérer, les 5 meilleurs objets par emplacement tous les 5 niveaux selon ta classe et ta faction, nouveaux donjons de Forever compris, avec où les obtenir, talents niveau par niveau, sorts appris et leur coût, rotation selon ton niveau. `/fc lvl`. |
+| Guide de leveling | Façon RestedXP : route intégrée de 1 à 60 optimisée pour ta race et ta classe avec les nouvelles quêtes de Forever et les donjons à faire au bon niveau (prendre, faire, rendre, voyager), rappel quand un objet BiS de ton niveau est à récupérer, les 5 meilleurs objets par emplacement tous les 5 niveaux selon ta classe et ta faction, nouveaux donjons de Forever compris, avec où les obtenir, talents niveau par niveau, sorts appris et leur coût, rotation selon ton niveau, métiers (meilleures paires pour ta classe, montée 1-300 recette par recette avec les composants). `/fc lvl`. |
 | Flèche | Flèche vers l'étape ou le point de passage, avec la distance. `/fc way 45.2 61.8 Titre`. |
 | Carte | Icônes sur la carte du monde (entrées de donjons et raids, quêtes à prendre et à rendre, objectifs, notes, campements), coordonnées, notes personnelles (`/fc note`). |
 | Campements | Durées des buffs de camp, campements retenus automatiquement. |
@@ -41,7 +41,7 @@ taux de drop, rerolls, sacs, carte, campements, interface et sécurité.
 /fc help          toutes les commandes
 /fc menu          menu de toutes les fenêtres (aussi au clic sur le bouton de la minimap)
 /fc guide         guide des donjons et raids
-/fc lvl [onglet]  guide de leveling (route, gear, talents, spells, rotation)
+/fc lvl [onglet]  guide de leveling (route, gear, talents, spells, rotation, prof)
 /fc eco [scan]    économie (prix HV, or, métiers, liste de courses)
 /fc pvp           statistiques JcJ
 /fc hc            mode Hardcore
@@ -69,6 +69,9 @@ taux de drop, rerolls, sacs, carte, campements, interface et sécurité.
   Du niveau 1 à environ 22, l'ordre des étapes reprend les guides Forever de **RestedXP**
   ([RXPGuides](https://github.com/RestedXP/RXPGuides), licence [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)),
   importés par `tools/import_rxp.py` ; la suite (environ 22-60) est calculée par le simulateur.
+- **Métiers** (`Data/Professions.lua`) : plans de montée 1-300 calculés par `tools/build_professions.py` (recette la moins chère par point de compétence)
+  à partir des recettes d'[AtlasLootClassic](https://github.com/Hoizame/AtlasLootClassic) (GPL), des maîtres de métier et marchands
+  de [VMaNGOS](https://github.com/vmangos/core) et CMaNGOS, et des positions des marchands de Questie.
 - **Équipement, talents, sorts, rotations** (`Data/GearGuide.lua`, `Data/ClassGuide.lua`) : générés depuis CMaNGOS
   (statistiques des objets, récompenses de quêtes, butin, sorts des maîtres de classe) avec des pondérations de stats de leveling.
 - **Taux mesurés** : le collecteur compte les objets tombés en jeu et les affiche à côté des taux de la base.
