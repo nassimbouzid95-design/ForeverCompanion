@@ -1,5 +1,10 @@
 # ForeverCompanion
 
+## v2.5.1
+
+- Quest requirements checked: a quest that needs a previous quest (all of a list, or one of several) is no longer shown to accept until that quest is turned in. When the route reaches a quest whose previous quest was passed, it passes it too and says in the chat which quest was missing (example: Aggressive Encroachment needs Aetheen of the Gales).
+- The "quests around you" list uses the same requirements.
+
 ## v2.5.0
 
 - First time a leveling route is picked for a character, a window asks: follow it, choose another start in /fc lvl, or no thanks (the step window then shows the quests around you; /fc lvl to follow a route again).

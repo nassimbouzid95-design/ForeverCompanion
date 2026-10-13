@@ -226,6 +226,15 @@ def write(rows, path=OUT):
     for i in range(0, len(pairs), 8):
         L.append('\t' + ' '.join('[%d] = { %d, %d },' % p for p in pairs[i:i + 8]))
     L.append('}')
+    # prerequisites: ns.QuestPrereqs[questID] = { { all of these turned in }, { one of these turned in } }
+    pre = []
+    for qid in sorted(rows):
+        a_ = [x for x in rows[qid]['pre_all'] if x in rows]; o_ = [x for x in rows[qid]['pre_any'] if x in rows]
+        if a_ or o_: pre.append('[%d] = { { %s }, { %s } },' % (qid, ', '.join(map(str, a_)), ', '.join(map(str, o_))))
+    L.append('ns.QuestPrereqs = {')
+    for i in range(0, len(pre), 6):
+        L.append('\t' + ' '.join(pre[i:i + 6]))
+    L.append('}')
     # breadcrumbs: the giver stops offering them once the quest they lead to is taken or done
     quests = F.load('Quest')
     crumbs = []

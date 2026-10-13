@@ -132,6 +132,49 @@ local function Superseded(questID)
 	return false
 end
 
+-- Previous quests the giver asks for (all of the first list, one of the second), from the quest database.
+local function PrereqsMet(questID, isDone)
+	local pre = ns.QuestPrereqs and ns.QuestPrereqs[questID]
+	if not pre then
+		local q = ns.QuestDB and ns.QuestDB[questID]
+		local prev = q and q[5]
+		return not prev or prev <= 0 or isDone(prev)
+	end
+	for _, id in ipairs(pre[1]) do
+		if not isDone(id) then return false end
+	end
+	if #pre[2] == 0 then return true end
+	for _, id in ipairs(pre[2]) do
+		if isDone(id) then return true end
+	end
+	return false
+end
+ns.QuestPrereqsMet = PrereqsMet
+
+-- Chat line, once per quest and session, when a step is passed because a previous quest is missing.
+local blockedSaid = {}
+function Route:NoteBlocked(questID)
+	if blockedSaid[questID] then return end
+	blockedSaid[questID] = true
+	local missing
+	local pre = ns.QuestPrereqs and ns.QuestPrereqs[questID]
+	for _, id in ipairs(pre and pre[1] or {}) do
+		if not TurnedIn(id) then missing = id break end
+	end
+	if not missing and pre and pre[2][1] then missing = pre[2][1] end
+	if not missing then
+		local q = ns.QuestDB[questID]
+		missing = q and q[5] and q[5] > 0 and q[5] or nil
+	end
+	local function Title(id)
+		local q = ns.QuestDB[id]
+		return q and q[7] or ("#" .. id)
+	end
+	if missing then
+		ns.Print(string.format(L["%s passed: it needs %s first, not done."], Title(questID), Title(missing)))
+	end
+end
+
 local function Unavailable(questID)
 	if not questID or InLog(questID) or TurnedIn(questID) then return false end
 	if ns.notOffered[questID] then return true end
@@ -212,7 +255,7 @@ function Assistant:Rebuild()
 			and (q[6] == 0 or q[6] == side)
 			and (q[3] == 0 or not raceBit or HasBit(q[3], raceBit))
 			and (q[4] == 0 or not classBit or HasBit(q[4], classBit))
-			and (q[5] == 0 or (q[5] > 0 and self:IsDone(q[5])) or (q[5] < 0 and inLog[-q[5]]))
+			and (q[5] >= 0 or inLog[-q[5]]) and PrereqsMet(id, function(pre) return self:IsDone(pre) end)
 			and not self:IsDone(id) then
 			local ok = true
 			local group = q[15] and q[15] > 0 and groups[q[15]]
@@ -413,11 +456,20 @@ function Route:IsStepDone(route, index)
 	local kind = step[1]
 	if CharState().manualDone[route.id .. ":" .. index] then return true end
 	if kind == "accept" then
-		return InLog(step.quest) or TurnedIn(step.quest) or Unavailable(step.quest)
+		if InLog(step.quest) or TurnedIn(step.quest) or Unavailable(step.quest) then return true end
+		-- the route reached it but a previous quest it needs was passed: the giver will not offer it, pass it too
+		-- (and its "do" and "turn in" steps, as the quest is not in the log)
+		if index <= CharState().step and not PrereqsMet(step.quest, TurnedIn) then
+			Route:NoteBlocked(step.quest)
+			return true
+		end
+		return false
 	elseif kind == "complete" then
 		return TurnedIn(step.quest) or (InLog(step.quest) and C_QuestLog.IsComplete(step.quest)) or Unavailable(step.quest)
+			or (index <= CharState().step and not InLog(step.quest) and not PrereqsMet(step.quest, TurnedIn))
 	elseif kind == "turnin" then
 		return TurnedIn(step.quest) or Unavailable(step.quest)
+			or (index <= CharState().step and not InLog(step.quest) and not PrereqsMet(step.quest, TurnedIn))
 	elseif kind == "level" then
 		return UnitLevel("player") >= step.level
 	elseif kind == "note" and step.abandon then

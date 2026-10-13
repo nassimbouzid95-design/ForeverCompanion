@@ -726,3 +726,6 @@ L["Choose"] = "Выбрать"
 L["Route off: the window shows the quests around you. /fc lvl to follow a route again."] = "Маршрут отключён: окно показывает задания рядом с вами. /fc lvl, чтобы снова следовать маршруту."
 L["Follow the leveling route made for your race and class?\n%s (levels %d-%d)"] = "Следовать маршруту прокачки для вашей расы и класса?\n%s (уровни %d-%d)"
 L["Take the airship to %s"] = "Отправляйтесь на дирижабле в %s"
+
+-- new
+L["%s passed: it needs %s first, not done."] = "%s пропущено: сначала нужно %s, не выполнено."

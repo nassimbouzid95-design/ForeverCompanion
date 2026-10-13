@@ -726,3 +726,6 @@ L["Choose"] = "Choisir"
 L["Route off: the window shows the quests around you. /fc lvl to follow a route again."] = "Route désactivée : la fenêtre montre les quêtes autour de vous. /fc lvl pour suivre une route à nouveau."
 L["Follow the leveling route made for your race and class?\n%s (levels %d-%d)"] = "Suivre la route de leveling faite pour votre race et votre classe ?\n%s (niveaux %d-%d)"
 L["Take the airship to %s"] = "Prendre le dirigeable pour %s"
+
+-- new
+L["%s passed: it needs %s first, not done."] = "%s passée : elle demande d'abord %s, pas faite."

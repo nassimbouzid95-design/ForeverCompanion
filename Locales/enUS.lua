@@ -726,3 +726,6 @@ L["Choose"] = true
 L["Route off: the window shows the quests around you. /fc lvl to follow a route again."] = true
 L["Follow the leveling route made for your race and class?\n%s (levels %d-%d)"] = true
 L["Take the airship to %s"] = true
+
+-- new
+L["%s passed: it needs %s first, not done."] = true
