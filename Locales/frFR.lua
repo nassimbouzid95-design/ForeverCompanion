@@ -805,3 +805,7 @@ L["The Barrens, Stonetalon Mountains, Duskwood, Wetlands, Hillsbrad Foothills"] 
 L["Arathi Highlands, Stranglethorn Vale, Desolace, Dustwallow Marsh"] = "Hautes-terres d'Arathi, Vallée de Strangleronce, Désolace, Marécage d'Âprefange"
 L["Tanaris, Feralas, The Hinterlands, Un'Goro Crater"] = "Tanaris, Féralas, Les Hinterlands, Cratère d'Un'Goro"
 L["Un'Goro Crater, Winterspring, Burning Steppes, Eastern Plaguelands"] = "Cratère d'Un'Goro, Berceau-de-l'Hiver, Steppes ardentes, Maleterres de l'est"
+
+-- boxes
+L["Right-click: mark this step as done"] = "Clic droit : marquer cette étape comme faite"
+L["Width of the step window"] = "Largeur de la fenêtre des étapes"

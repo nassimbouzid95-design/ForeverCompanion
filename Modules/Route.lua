@@ -16,8 +16,9 @@ local Route = ns.NewModule("Route", {
 	autoRoutes = true, -- follow the built-in leveling routes (Data\RoutesAuto.lua)
 	showUpgrades = true, -- best-in-slot items of your level to pick up, under the steps
 	routeDungeons = true, -- dungeon steps of the built-in routes (off: solo, they are skipped)
-	stepsShown = 3,
+	stepsShown = 3, -- step boxes listed
 	idleAlpha = 0.75, -- opacity while the mouse is elsewhere
+	width = 300,
 	collapsed = false,
 }, {
 	recorded = {}, -- [name] = route
@@ -839,6 +840,226 @@ function Route:CreateWindow()
 	self.frame = f
 end
 
+---------------------------------------------------------------------------
+-- Step boxes (like RestedXP): the actions done at one place are grouped in a numbered box, one line per
+-- action with its icon (! accept, ? turn in, sword for objectives with their progress), the NPC and the
+-- place under them.  The current box is highlighted, the next ones are dimmed.
+---------------------------------------------------------------------------
+local ICONS = {
+	accept = { "QuestNormal", "Interface\\GossipFrame\\AvailableQuestIcon" },
+	turnin = { "QuestTurnin", "Interface\\GossipFrame\\ActiveQuestIcon" },
+	complete = { nil, "Interface\\CURSOR\\Attack" },
+	["goto"] = { nil, "Interface\\MINIMAP\\TRACKING\\FlightMaster" },
+	level = { nil, "Interface\\PetBattles\\PetBattle-LockIcon" },
+	dungeon = { nil, "Interface\\TargetingFrame\\UI-TargetingFrame-Skull" },
+	note = { nil, "Interface\\GossipFrame\\GossipGossipIcon" },
+	train = { nil, "Interface\\GossipFrame\\TrainerGossipIcon" },
+	done = { nil, "Interface\\RaidFrame\\ReadyCheck-Ready" },
+}
+local function SetIcon(tex, kind)
+	local icon = ICONS[kind] or ICONS.note
+	if icon[1] and tex.SetAtlas and C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(icon[1]) then
+		tex:SetAtlas(icon[1])
+	else
+		tex:SetTexture(icon[2])
+	end
+end
+
+local function Near(a, b, yards)
+	if not (a.wx and b.wx) or a.cont ~= b.cont then return false end
+	return (a.wx - b.wx) ^ 2 + (a.wy - b.wy) ^ 2 <= yards * yards
+end
+
+-- Same box: quest actions at the same NPC, or objectives close to each other.
+local function SameBox(a, b)
+	local ka, kb = a[1], b[1]
+	if (ka == "accept" or ka == "turnin") and (kb == "accept" or kb == "turnin") then
+		return (a.npc and a.npc == b.npc) or Near(a, b, 25)
+	end
+	if ka == "complete" and kb == "complete" then return Near(a, b, 220) end
+	return false
+end
+
+function Route:Boxes(route, first, count)
+	local boxes, index = {}, first
+	while index <= #route.steps and #boxes < count do
+		local step = route.steps[index]
+		if index == first or not self:IsStepDone(route, index) then
+			local box = boxes[#boxes]
+			if box and #box < 6 and SameBox(route.steps[box[1]], step) then
+				box[#box + 1] = index
+			else
+				boxes[#boxes + 1] = { index }
+			end
+		end
+		index = index + 1
+	end
+	return boxes
+end
+
+local function BoxLine(box, i)
+	local line = box.lines[i]
+	if not line then
+		line = CreateFrame("Frame", nil, box)
+		line.icon = line:CreateTexture(nil, "ARTWORK")
+		line.icon:SetSize(14, 14)
+		line.icon:SetPoint("TOPLEFT", 0, 0)
+		line.text = UI.Text(line, 12)
+		line.text:SetPoint("TOPLEFT", 18, 0)
+		line.text:SetPoint("RIGHT", 0, 0)
+		line.text:SetJustifyH("LEFT")
+		line.text:SetWordWrap(true)
+		box.lines[i] = line
+	end
+	line:Show()
+	return line
+end
+
+function Route:BoxPool(f)
+	if f.boxes then return f.boxes end
+	f.boxes = UI.Pool(function(parent)
+		local box = CreateFrame("Button", nil, parent)
+		box:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+		box.bg = UI.Fill(box, { 1, 1, 1, 0 }, "BACKGROUND")
+		box.bg:SetAllPoints()
+		box.edge = UI.Fill(box, C.accent, "ARTWORK")
+		box.edge:SetPoint("TOPLEFT")
+		box.edge:SetPoint("BOTTOMLEFT")
+		box.edge:SetWidth(2)
+		box.num = UI.Text(box, 11, C.muted, "CENTER")
+		box.num:SetPoint("TOPLEFT", 4, -4)
+		box.num:SetWidth(20)
+		box.dist = UI.Text(box, 10, C.muted, "RIGHT")
+		box.dist:SetPoint("TOPRIGHT", -4, -4)
+		box.foot = UI.Text(box, 11, C.muted)
+		box.foot:SetJustifyH("LEFT")
+		box.foot:SetWordWrap(true)
+		box.lines = {}
+		box:SetScript("OnEnter", function(b) f:SetAlpha(1) if not b.current then b.bg:SetVertexColor(1, 1, 1, 0.05) end
+			GameTooltip:SetOwner(b, "ANCHOR_LEFT")
+			GameTooltip:AddLine(L["Click: point the arrow here"], 0.7, 0.7, 0.7)
+			GameTooltip:AddLine(L["Right-click: mark this step as done"], 0.7, 0.7, 0.7)
+			GameTooltip:Show()
+		end)
+		box:SetScript("OnLeave", function(b) if not b.current then b.bg:SetVertexColor(1, 1, 1, 0) end GameTooltip_Hide() end)
+		return box
+	end)
+	return f.boxes
+end
+
+function Route:PlaceBox(f, route, indices, current, y)
+	local box = self:BoxPool(f):Acquire(f)
+	for _, line in ipairs(box.lines) do line:Hide() end
+	box.current = current
+	box.bg:SetVertexColor(C.accent[1], C.accent[2], C.accent[3], current and 0.12 or 0)
+	box.edge:SetShown(current)
+	box:SetAlpha(current and 1 or 0.72)
+	box.num:SetText(indices[1])
+	local width = (f:GetWidth() or WIDTH) - 2 * PAD
+	local inner = width - 30
+	local ly, n = 4, 0
+	local npc, place, target
+	for _, index in ipairs(indices) do
+		local step = route.steps[index]
+		local kind = step[1]
+		local done = index ~= CharState().step and self:IsStepDone(route, index)
+		if not done and not target then target = step end
+		local title = self:StepText(step, true)
+		local text
+		if kind == "accept" then text = L["Accept"] .. " " .. UI.Colorize(title, C.gold)
+		elseif kind == "turnin" then text = L["Turn in"] .. " " .. UI.Colorize(title, C.good)
+		elseif kind == "complete" then text = UI.Colorize(title, { 0.45, 0.8, 1 })
+		else text = title end
+		-- another NPC than the box's one (standing next to it)
+		local firstNpc = route.steps[indices[1]].npc
+		if step.npc and firstNpc and step.npc ~= firstNpc and (kind == "accept" or kind == "turnin") then
+			text = text .. UI.Colorize("  (" .. step.npc .. ")", C.muted)
+		end
+		if done then text = UI.Colorize((text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")), C.muted) end
+		n = n + 1
+		local line = BoxLine(box, n)
+		SetIcon(line.icon, done and "done" or kind)
+		line.text:SetWidth(inner - 18)
+		line.text:SetText(text)
+		line:ClearAllPoints()
+		line:SetPoint("TOPLEFT", box, "TOPLEFT", 26, -ly)
+		line:SetSize(inner, line.text:GetStringHeight())
+		ly = ly + line.text:GetStringHeight() + 3
+		-- objectives of the quest, with their progress
+		if kind == "complete" and not done and step.quest and InLog(step.quest) then
+			for _, obj in ipairs(C_QuestLog.GetQuestObjectives(step.quest) or {}) do
+				if obj.text and not ns.IsSecret(obj.text) then
+					n = n + 1
+					local o = BoxLine(box, n)
+					o.icon:SetTexture(nil)
+					o.text:SetWidth(inner - 18)
+					o.text:SetText(UI.Colorize("• " .. obj.text, obj.finished and C.good or C.text))
+					o:ClearAllPoints()
+					o:SetPoint("TOPLEFT", box, "TOPLEFT", 34, -ly)
+					o:SetSize(inner - 8, o.text:GetStringHeight())
+					ly = ly + o.text:GetStringHeight() + 2
+				end
+			end
+		end
+		if kind == "dungeon" or (kind == "goto" and step.ship) then
+			local extra = self:StepText(step):match("\n(.*)$")
+			if extra and current then
+				n = n + 1
+				local o = BoxLine(box, n)
+				o.icon:SetTexture(nil)
+				o.text:SetWidth(inner - 18)
+				o.text:SetText(extra)
+				o:ClearAllPoints()
+				o:SetPoint("TOPLEFT", box, "TOPLEFT", 44, -ly)
+				o:SetSize(inner - 18, o.text:GetStringHeight())
+				ly = ly + o.text:GetStringHeight() + 2
+			end
+		end
+		npc = npc or ((kind == "accept" or kind == "turnin") and step.npc)
+		if not place then
+			if step.map and step.x then place = string.format("%s (%.0f, %.0f)", ns.MapName(step.map), step.x * 100, step.y * 100)
+			elseif step.wx then place = ns.WorldPlace(step.cont, step.wx, step.wy) end
+		end
+	end
+	target = target or route.steps[indices[1]]
+	-- NPC and place
+	local foot = {}
+	if npc then foot[#foot + 1] = UI.Colorize(npc, C.gold) end
+	if place and current then foot[#foot + 1] = place end
+	box.foot:ClearAllPoints()
+	box.foot:SetPoint("TOPLEFT", box, "TOPLEFT", 26, -ly)
+	box.foot:SetWidth(inner)
+	box.foot:SetText(table.concat(foot, "  ·  "))
+	if #foot > 0 then ly = ly + box.foot:GetStringHeight() + 2 end
+	box.dist:SetText("")
+	if target.wx then
+		local cont, wx, wy = ns.PlayerWorldPosition()
+		if cont == target.cont and wx then
+			box.dist:SetText(string.format(L["%d yards"], math.floor(math.sqrt((wx - target.wx) ^ 2 + (wy - target.wy) ^ 2))))
+		end
+	end
+	box:SetScript("OnClick", function(_, button)
+		if button == "RightButton" then
+			for _, index in ipairs(indices) do
+				if not self:IsStepDone(route, index) then
+					CharState().manualDone[route.id .. ":" .. index] = true
+					break
+				end
+			end
+			self:Advance()
+			self:Refresh()
+		elseif target.wx or target.map then
+			self:PointAt(target)
+		end
+	end)
+	box:ClearAllPoints()
+	box:SetPoint("TOPLEFT", f, "TOPLEFT", PAD - 2, -y)
+	box:SetPoint("RIGHT", f, "RIGHT", -PAD + 2, 0)
+	local h = math.max(ly + 3, 22)
+	box:SetHeight(h)
+	return y + h + 3
+end
+
 function Route:UpdateWindow()
 	local f = self.frame
 	if not f then return end
@@ -851,7 +1072,9 @@ function Route:UpdateWindow()
 		return
 	end
 	f:Show()
+	f:SetWidth(s.width or WIDTH)
 	f.rows:ReleaseAll()
+	self:BoxPool(f):ReleaseAll()
 	f.body:SetText("")
 	local recording = CharState().recording
 	local y = 24
@@ -916,46 +1139,8 @@ function Route:UpdateWindow()
 		f.skip.tooltip = L["Mark this step as done"]
 		f.skip:Show()
 		if not s.collapsed then
-			local shown, index = 0, state.step
-			while index <= #route.steps and shown < s.stepsShown do
-				local step = route.steps[index]
-				if index == state.step or not self:IsStepDone(route, index) then
-					shown = shown + 1
-					local first = index == state.step
-					local row = f.rows:Acquire(f)
-					SetRow(row, step[1], first)
-					row.titleText = self:StepText(step, true)
-					local kindLabel = UI.Colorize(((TAG[step[1]] or TAG.note)[1] or "") .. " ", KindColor(step[1]))
-					row.title:SetText(kindLabel .. row.titleText)
-					row.title:SetTextColor(first and 1 or 0.8, first and 1 or 0.8, first and 1 or 0.8)
-					row.dist:SetText("")
-					if step.wx then
-						local cont, wx, wy = ns.PlayerWorldPosition()
-						if cont == step.cont and wx then
-							row.dist:SetText(string.format(L["%d yards"], math.floor(math.sqrt((wx - step.wx) ^ 2 + (wy - step.wy) ^ 2))))
-						end
-					end
-					local full = self:StepText(step)
-					local rest = full:match("^[^\n]*\n(.*)$")
-					if step.npc and (step[1] == "accept" or step[1] == "turnin") then
-						local who = UI.Colorize(step.npc, C.gold)
-						rest = rest and (who .. "  ·  " .. rest) or who
-					end
-					row.tipLines = { rest }
-					local detail
-					if first then detail = rest end
-					local stepIndex = index
-					row:SetScript("OnClick", function(_, button)
-						if button == "RightButton" then
-							CharState().manualDone[route.id .. ":" .. stepIndex] = true
-							self:Advance()
-						elseif step.wx or step.map then
-							self:PointAt(step)
-						end
-					end)
-					y = PlaceRow(f, row, y, detail)
-				end
-				index = index + 1
+			for n, box in ipairs(self:Boxes(route, state.step, s.stepsShown)) do
+				y = self:PlaceBox(f, route, box, n == 1, y)
 			end
 		end
 	end
@@ -1255,6 +1440,7 @@ function Route:GetOptions()
 			autoRoutes = { type = "toggle", order = 9.1, width = "full", name = L["Follow the built-in leveling route of my race and class (1-60)"] },
 			routeDungeons = { type = "toggle", order = 9.15, width = "full", name = L["Include the dungeons in the route (off: solo leveling, they are skipped)"] },
 			stepsShown = { type = "range", order = 9.2, name = L["Route steps listed"], min = 1, max = 10, step = 1 },
+			width = { type = "range", order = 9.22, name = L["Width of the step window"], min = 220, max = 460, step = 10 },
 			idleAlpha = { type = "range", order = 9.25, name = L["Opacity when the mouse is elsewhere"], min = 0.2, max = 1, step = 0.05, isPercent = true },
 			style = {
 				type = "select", order = 5, name = L["Route style"],

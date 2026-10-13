@@ -785,3 +785,7 @@ L["Thick Leather (beasts 40-50)"] = "Dickes Leder (Tiere 40-50)"
 L["Rugged Leather (beasts 50-60)"] = "Unverwüstliches Leder (Tiere 50-60)"
 L["every starting zone"] = "jedes Startgebiet"
 L["your starting zone and the next one"] = "dein Startgebiet und das nächste"
+
+-- boxes
+L["Right-click: mark this step as done"] = "Rechtsklick: diesen Schritt als erledigt markieren"
+L["Width of the step window"] = "Breite des Schrittfensters"

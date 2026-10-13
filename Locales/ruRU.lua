@@ -785,3 +785,7 @@ L["Thick Leather (beasts 40-50)"] = "Толстая кожа (звери 40-50)"
 L["Rugged Leather (beasts 50-60)"] = "Грубая кожа (звери 50-60)"
 L["every starting zone"] = "все стартовые зоны"
 L["your starting zone and the next one"] = "ваша стартовая зона и следующая"
+
+-- boxes
+L["Right-click: mark this step as done"] = "Правый щелчок: отметить шаг как выполненный"
+L["Width of the step window"] = "Ширина окна шагов"

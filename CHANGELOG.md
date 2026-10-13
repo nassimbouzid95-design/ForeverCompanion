@@ -1,5 +1,12 @@
 # ForeverCompanion
 
+## v2.8.0
+
+- The step window reads like RestedXP: what you do at one place is grouped in a numbered box (every quest to hand in and to take at the same NPC together), one line per action with its icon (! to accept, ? to turn in, sword for objectives), the progress of each objective under its quest, then the NPC and the place.
+  - The current box is highlighted; the next ones are dimmed. Actions already done inside a box are ticked.
+  - Click a box: the arrow points to it. Right-click: mark its next action as done.
+  - New option: width of the step window (300 by default).
+
 ## v2.7.0
 
 - New Professions tab in the leveling guide (/fc lvl prof, or Professions in the minimap menu):

@@ -805,3 +805,7 @@ L["The Barrens, Stonetalon Mountains, Duskwood, Wetlands, Hillsbrad Foothills"] 
 L["Arathi Highlands, Stranglethorn Vale, Desolace, Dustwallow Marsh"] = true
 L["Tanaris, Feralas, The Hinterlands, Un'Goro Crater"] = true
 L["Un'Goro Crater, Winterspring, Burning Steppes, Eastern Plaguelands"] = true
+
+-- boxes
+L["Right-click: mark this step as done"] = true
+L["Width of the step window"] = true
