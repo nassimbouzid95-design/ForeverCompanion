@@ -103,11 +103,40 @@ end
 -- Quests this character can not take: another class or race, or not offered by the giver when the player talked
 -- to them (ns.notOffered, this session only).  Their steps are passed.
 ns.notOffered = ns.notOffered or {}
+
+-- Quests that need each quest first (questID -> quests whose previous quest it is), built on first use.
+local followers
+local function Followers(questID)
+	if not followers then
+		followers = {}
+		for id, q in pairs(ns.QuestDB or {}) do
+			local prev = q[5]
+			if prev and prev > 0 then
+				followers[prev] = followers[prev] or {}
+				table.insert(followers[prev], id)
+			end
+		end
+	end
+	return followers[questID]
+end
+
+-- Done another way: a quest that needs this one is already taken or done (the game did not report this one, or it
+-- was done before the addon), or this one is a breadcrumb whose quest is already taken or done (no longer offered).
+local function Superseded(questID)
+	local target = ns.QuestBreadcrumbs and ns.QuestBreadcrumbs[questID]
+	if target and (InLog(target) or TurnedIn(target)) then return true end
+	for _, other in ipairs(Followers(questID) or {}) do
+		if InLog(other) or TurnedIn(other) then return true end
+	end
+	return false
+end
+
 local function Unavailable(questID)
 	if not questID or InLog(questID) or TurnedIn(questID) then return false end
 	if ns.notOffered[questID] then return true end
 	local q = ns.QuestDB and ns.QuestDB[questID]
 	if not q then return false end
+	if Superseded(questID) then return true end
 	local _, _, classID = UnitClass("player")
 	if q[4] and q[4] ~= 0 and classID and not HasBit(q[4], 2 ^ (classID - 1)) then return true end
 	local raceBit = ns.PlayerRaceBit()
@@ -434,10 +463,12 @@ end
 
 -- Arrow on a step: map position first (new zones such as Zephras Isle), world position otherwise.
 function Route:PointAt(step)
+	local title = self:StepText(step, true)
+	if step.npc and (step[1] == "accept" or step[1] == "turnin") then title = step.npc .. " · " .. title end
 	if step.map and step.x and step.y then
-		ns.SetWaypoint(step.map, step.x, step.y, self:StepText(step, true), OWNER)
+		ns.SetWaypoint(step.map, step.x, step.y, title, OWNER)
 	elseif step.wx then
-		ns.SetWorldWaypoint(step.cont, step.wx, step.wy, self:StepText(step, true), OWNER)
+		ns.SetWorldWaypoint(step.cont, step.wx, step.wy, title, OWNER)
 	end
 end
 
@@ -476,9 +507,8 @@ ns.arrivalCallbacks[OWNER] = function()
 	local step = Route:CurrentStep()
 	if step and step[1] == "goto" then
 		Route:MarkCurrentDone()
-	else
-		ns.ClearWaypoint(OWNER)
 	end
+	-- quest steps keep the arrow until the quest is accepted, done or turned in
 end
 
 ---------------------------------------------------------------------------
@@ -674,7 +704,7 @@ function Route:CreateWindow()
 		row.mark:SetSize(3, ROW_H - 8)
 		row.title = UI.Text(row, 12)
 		row.title:SetPoint("TOPLEFT", 10, -2)
-		row.title:SetPoint("RIGHT", -46, 0)
+		row.title:SetPoint("RIGHT", -60, 0)
 		row.title:SetWordWrap(false)
 		row.dist = UI.Text(row, 10, C.muted, "RIGHT")
 		row.dist:SetPoint("TOPRIGHT", -3, -4)
@@ -810,6 +840,10 @@ function Route:UpdateWindow()
 					end
 					local full = self:StepText(step)
 					local rest = full:match("^[^\n]*\n(.*)$")
+					if step.npc and (step[1] == "accept" or step[1] == "turnin") then
+						local who = UI.Colorize(step.npc, C.gold)
+						rest = rest and (who .. "  ·  " .. rest) or who
+					end
 					row.tipLines = { rest }
 					local detail
 					if first then detail = rest end
@@ -972,6 +1006,29 @@ function Route:CheckOffered(offeredIDs, offeredTitles)
 	self:Advance()
 end
 
+-- Talking to any quest giver: the coming "accept" steps of that NPC whose quest they do not offer (although its
+-- level and previous quest are met) are passed too, so the route does not send you back to them for nothing.
+function Route:CheckOfferedAhead(offeredIDs, offeredTitles)
+	local route = self.route
+	local npc = UnitName("npc")
+	if not route or not npc or ns.IsSecret(npc) then return end
+	local state, level, changed = CharState(), UnitLevel("player"), false
+	for index = state.step, math.min(#route.steps, state.step + 60) do
+		local step = route.steps[index]
+		local id = step.quest
+		if step[1] == "accept" and id and step.npc == npc and not ns.notOffered[id] and not InLog(id) and not TurnedIn(id) then
+			local q = ns.QuestDB and ns.QuestDB[id]
+			local ready = q and (not q[2] or level >= q[2]) and (not q[5] or q[5] == 0 or TurnedIn(q[5]))
+			local title = QuestTitle(step)
+			if ready and not offeredIDs[id] and not (title and offeredTitles[title]) then
+				ns.notOffered[id] = true
+				changed = true
+			end
+		end
+	end
+	if changed then self:Advance() end
+end
+
 function Route:GOSSIP_SHOW()
 	self.lastGossip = GetTime()
 	if not (C_GossipInfo and C_GossipInfo.GetAvailableQuests) then return end
@@ -984,6 +1041,7 @@ function Route:GOSSIP_SHOW()
 		if info.questID then ids[info.questID] = true end
 	end
 	self:CheckOffered(ids, titles)
+	self:CheckOfferedAhead(ids, titles)
 end
 
 function Route:QUEST_GREETING()
@@ -993,7 +1051,12 @@ function Route:QUEST_GREETING()
 		local title = GetAvailableTitle(i)
 		if title and not ns.IsSecret(title) then titles[title] = true end
 	end
+	for i = 1, (GetNumActiveQuests and GetNumActiveQuests() or 0) do
+		local title = GetActiveTitle(i)
+		if title and not ns.IsSecret(title) then titles[title] = true end
+	end
 	self:CheckOffered(ids, titles)
+	self:CheckOfferedAhead(ids, titles)
 end
 
 function Route:QUEST_DETAIL()

@@ -226,6 +226,16 @@ def write(rows, path=OUT):
     for i in range(0, len(pairs), 8):
         L.append('\t' + ' '.join('[%d] = { %d, %d },' % p for p in pairs[i:i + 8]))
     L.append('}')
+    # breadcrumbs: the giver stops offering them once the quest they lead to is taken or done
+    quests = F.load('Quest')
+    crumbs = []
+    for qid in sorted(rows):
+        target = F.L(quests.get(str(qid)) or {}, 27)
+        if target and int(target) in rows: crumbs.append((qid, int(target)))
+    L.append('ns.QuestBreadcrumbs = {')
+    for i in range(0, len(crumbs), 8):
+        L.append('\t' + ' '.join('[%d] = %d,' % p for p in crumbs[i:i + 8]))
+    L.append('}')
     open(path, 'w').write('\n'.join(L) + '\n')
     print('wrote', path, os.path.getsize(path), file=sys.stderr)
 

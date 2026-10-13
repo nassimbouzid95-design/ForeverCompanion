@@ -1,5 +1,12 @@
 # ForeverCompanion
 
+## v2.4.3
+
+- Arrow: smaller, and it no longer disappears when you get close to the quest giver. It stays on them until the quest is accepted or turned in, and its title shows the NPC's name.
+- Route window: the name of the NPC to talk to is shown under the current step (and in the tooltip of the others). Long quest names no longer run into the distance.
+- Quests done another way are passed: a quest whose follow-up quest is already taken or done, and a breadcrumb quest whose destination quest is already taken or done (the giver no longer offers it).
+- Talking to a quest giver also passes the coming steps of that NPC whose quest they do not offer you.
+
 ## v2.4.2
 
 - Route window made small and discreet: 250 pixels wide, thin coloured marks for each step, 3 steps by default with details only on the current one, and a single line for the best-in-slot item to pick up.

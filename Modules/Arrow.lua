@@ -79,7 +79,7 @@ function Arrow:CreateFrame()
 	f:SetScript("OnLeave", GameTooltip_Hide)
 
 	local UI, C = ns.UI, ns.UI.COLORS
-	f:SetSize(84, 84)
+	f:SetSize(58, 58)
 	local ring = f:CreateTexture(nil, "BACKGROUND")
 	ring:SetTexture(UI.MEDIA .. "Ring")
 	ring:SetAllPoints()
@@ -87,23 +87,23 @@ function Arrow:CreateFrame()
 	local glow = f:CreateTexture(nil, "BORDER")
 	glow:SetTexture(UI.MEDIA .. "Glow")
 	glow:SetPoint("CENTER")
-	glow:SetSize(110, 110)
+	glow:SetSize(76, 76)
 	glow:SetBlendMode("ADD")
 	glow:SetAlpha(0)
 	f.glow = glow
 	local tex = f:CreateTexture(nil, "ARTWORK")
 	tex:SetTexture(UI.MEDIA .. "Arrow")
-	tex:SetSize(60, 60)
+	tex:SetSize(40, 40)
 	tex:SetPoint("CENTER")
 	f.arrow = tex
 
-	local title = UI.Text(f, 15, C.gold, "CENTER")
-	title:SetPoint("TOP", f, "BOTTOM", 0, -4)
-	title:SetWidth(260)
+	local title = UI.Text(f, 12, C.gold, "CENTER")
+	title:SetPoint("TOP", f, "BOTTOM", 0, -2)
+	title:SetWidth(230)
 	title:SetWordWrap(false)
 	f.title = title
-	local dist = UI.Text(f, 13, C.text, "CENTER")
-	dist:SetPoint("TOP", title, "BOTTOM", 0, -3)
+	local dist = UI.Text(f, 11, C.text, "CENTER")
+	dist:SetPoint("TOP", title, "BOTTOM", 0, -2)
 	f.dist = dist
 
 	local elapsed = 0
