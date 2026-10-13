@@ -716,3 +716,7 @@ L["Follow the built-in leveling route of my race and class (1-60)"] = "Seguir la
 L["%s is not offered to you: step passed."] = "%s no se te ofrece: paso omitido."
 L["No built-in route for your race and class yet."] = "Aún no hay ruta integrada para tu raza y clase."
 L["Leveling route: %s (levels %d-%d), followed automatically."] = "Ruta de subida: %s (niveles %d-%d), seguida automáticamente."
+
+-- new
+L["Click: fold or unfold"] = "Clic: plegar o desplegar"
+L["Opacity when the mouse is elsewhere"] = "Opacidad cuando el ratón está en otro lugar"

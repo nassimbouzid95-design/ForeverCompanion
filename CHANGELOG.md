@@ -1,5 +1,10 @@
 # ForeverCompanion
 
+## v2.4.2
+
+- Route window made small and discreet: 250 pixels wide, thin coloured marks for each step, 3 steps by default with details only on the current one, and a single line for the best-in-slot item to pick up.
+- The window fades when the mouse is elsewhere (opacity set in /fc > Leveling) and comes back on mouse-over. Click its title to fold it down to one line.
+
 ## v2.4.1
 
 - Leveling routes: the route list of /fc lvl only shows the routes of your class (a druid could pick the warrior route and get warrior quests). A route of another class picked before is replaced by yours on its own, and the chat says which route is followed.

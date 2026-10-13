@@ -16,7 +16,9 @@ local Route = ns.NewModule("Route", {
 	autoRoutes = true, -- follow the built-in leveling routes (Data\RoutesAuto.lua)
 	showUpgrades = true, -- best-in-slot items of your level to pick up, under the steps
 	routeDungeons = true, -- dungeon steps of the built-in routes (off: solo, they are skipped)
-	stepsShown = 5,
+	stepsShown = 3,
+	idleAlpha = 0.75, -- opacity while the mouse is elsewhere
+	collapsed = false,
 }, {
 	recorded = {}, -- [name] = route
 	imported = {}, -- list of routes pasted by the player
@@ -558,69 +560,108 @@ local TAG = {
 	gear = { L["BiS"], { 0.75, 0.5, 1 } },
 }
 
--- Rows of the gear upgrades of your level (best-in-slot lists of the leveling guide).
+-- Compact step window ("HUD"): a slim header, one line per step with a coloured mark for its kind, details
+-- only under the current step, and one line for the best-in-slot reminder.  Faded until the mouse is over it.
+local WIDTH, ROW_H, PAD = 250, 17, 8
+
+local function KindColor(kind)
+	local tag = TAG[kind] or TAG.note
+	return tag[2]
+end
+
+local function SetRow(row, kind, first)
+	local c = KindColor(kind)
+	row.mark:SetVertexColor(c[1], c[2], c[3], first and 1 or 0.7)
+	row.bg:SetVertexColor(C.accent[1], C.accent[2], C.accent[3], first and 0.10 or 0)
+	row.first = first
+end
+
+local function PlaceRow(f, row, y, detail)
+	row.detail:SetText(detail or "")
+	local h = ROW_H + ((detail and detail ~= "") and (row.detail:GetStringHeight() + 2) or 0)
+	row:ClearAllPoints()
+	row:SetPoint("TOPLEFT", f, "TOPLEFT", PAD - 2, -y)
+	row:SetPoint("RIGHT", f, "RIGHT", -PAD + 2, 0)
+	row:SetHeight(h)
+	return y + h + 1
+end
+
+-- One line for the gear upgrades of your level (best-in-slot lists of the leveling guide).
 function Route:AddUpgradeRows(f, y)
 	if not (self:Settings().showUpgrades and ns.GearUpgrades) then return y end
 	local ok, ups = pcall(ns.GearUpgrades)
 	if not ok or not ups or #ups == 0 then return y end
-	local shown = 0
-	for _, u in ipairs(ups) do
-		if u.name and shown < 2 then
-			shown = shown + 1
-			local row = f.rows:Acquire(f)
-			row.tag:Set(TAG.gear[1], TAG.gear[2])
-			row.tag:SetWidth(68)
-			row.first = false
-			local color = u.quality and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[u.quality]
-			row.titleText = u.name
-			row.title:SetText((color and color.hex and (color.hex .. u.name .. "|r") or u.name) .. UI.Colorize("  " .. u.slot, C.muted))
-			row.title:SetTextColor(0.9, 0.9, 0.9)
-			row.dist:SetText("")
-			row.bg:SetVertexColor(1, 1, 1, 0)
-			row.detail:SetText(UI.Colorize(u.inBags and L["in your bags: equip it"] or u.source or "", u.inBags and C.good or C.muted))
-			local h = 26 + row.detail:GetStringHeight() + 6
-			row:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -y)
-			row:SetPoint("RIGHT", f, "RIGHT", -10, 0)
-			row:SetHeight(h)
-			row:SetScript("OnClick", function(_, button)
-				if button == "RightButton" or not ns.GoToUpgrade(u) then ns.ToggleClassGuide("gear") end
-			end)
-			y = y + h + 2
-		end
-	end
-	if #ups > shown then
-		local row = f.rows:Acquire(f)
-		row.tag:Set("", C.muted)
-		row.tag:SetWidth(68)
-		row.first = false
-		row.titleText = string.format(L["%d more upgrades: open the gear list"], #ups - shown)
-		row.title:SetText(UI.Colorize(row.titleText, C.muted))
-		row.dist:SetText("")
-		row.detail:SetText("")
-		row.bg:SetVertexColor(1, 1, 1, 0)
-		row:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -y)
-		row:SetPoint("RIGHT", f, "RIGHT", -10, 0)
-		row:SetHeight(24)
-		row:SetScript("OnClick", function() ns.ToggleClassGuide("gear") end)
-		y = y + 26
-	end
-	return y
+	local u
+	for _, x in ipairs(ups) do if x.name then u = x break end end
+	if not u then return y end
+	local row = f.rows:Acquire(f)
+	SetRow(row, "gear", false)
+	local color = u.quality and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[u.quality]
+	row.titleText = u.name
+	row.tipLines = { u.inBags and L["in your bags: equip it"] or u.source or "", #ups > 1 and string.format(L["%d more upgrades: open the gear list"], #ups - 1) or nil }
+	row.title:SetText(UI.Colorize(L["BiS"] .. " ", TAG.gear[2]) .. (color and color.hex and (color.hex .. u.name .. "|r") or u.name))
+	row.dist:SetText(#ups > 1 and UI.Colorize("+" .. (#ups - 1), C.muted) or "")
+	row:SetScript("OnClick", function(_, button)
+		if button == "RightButton" or not ns.GoToUpgrade(u) then ns.ToggleClassGuide("gear") end
+	end)
+	return PlaceRow(f, row, y, u.inBags and UI.Colorize(L["in your bags: equip it"], C.good) or nil)
 end
 
 function Route:CreateWindow()
 	if self.frame then return end
-	local f = UI.Panel("ForeverCompanionRouteFrame", 360, 200, function() return self:Settings() end)
+	local f = UI.Panel("ForeverCompanionRouteFrame", WIDTH, 60, function() return self:Settings() end)
+	f:SetBackdropColor(C.bg[1], C.bg[2], C.bg[3], 0.62)
+	f:SetBackdropBorderColor(C.border[1], C.border[2], C.border[3], 0.5)
+	f.stripe:SetWidth(2)
+	f.stripe:SetAlpha(0.7)
 
-	f.title = UI.Text(f, 16, C.gold)
-	f.title:SetPoint("TOPLEFT", 14, -10)
-	f.title:SetPoint("RIGHT", -70, 0)
+	-- header: title (click to fold), progress, back / done / dungeon buttons
+	f.header = CreateFrame("Button", nil, f)
+	f.header:SetPoint("TOPLEFT", 0, 0)
+	f.header:SetPoint("TOPRIGHT", -52, 0)
+	f.header:SetHeight(22)
+	f.header:RegisterForDrag("LeftButton")
+	f.header:SetScript("OnDragStart", function() if not self:Settings().locked then f:StartMoving() end end)
+	f.header:SetScript("OnDragStop", function() f:GetScript("OnDragStop")(f) end)
+	f.header:SetScript("OnClick", function()
+		local s = self:Settings()
+		s.collapsed = not s.collapsed
+		self:UpdateWindow()
+	end)
+	f.header:SetScript("OnEnter", function(h)
+		GameTooltip:SetOwner(h, "ANCHOR_LEFT")
+		GameTooltip:AddLine(f.tip or "", 1, 1, 1)
+		GameTooltip:AddLine(L["Click: fold or unfold"], 0.7, 0.7, 0.7)
+		GameTooltip:Show()
+	end)
+	f.header:SetScript("OnLeave", GameTooltip_Hide)
+	f.title = UI.Text(f.header, 12, C.gold)
+	f.title:SetPoint("LEFT", PAD + 2, 0)
+	f.title:SetPoint("RIGHT", -34, 0)
 	f.title:SetWordWrap(false)
-	f.progress = UI.Text(f, 12, C.muted, "RIGHT")
-	f.progress:SetPoint("TOPRIGHT", -12, -13)
+	f.progress = UI.Text(f.header, 10, C.muted, "RIGHT")
+	f.progress:SetPoint("RIGHT", -2, 0)
 
-	f.body = UI.Text(f, 13)
-	f.body:SetPoint("TOPLEFT", 14, -36)
-	f.body:SetPoint("RIGHT", -12, 0)
+	f.skip = UI.IconButton(f, 14, "Interface\\RaidFrame\\ReadyCheck-Ready", L["Mark this step as done"], function()
+		if self.route then self:MarkCurrentDone() else
+			local best = Assistant:Best()
+			if best then Assistant.ignored[best.kind .. best.id] = true; self:Refresh() end
+		end
+	end)
+	f.skip:SetPoint("TOPRIGHT", -6, -4)
+	f.back = UI.IconButton(f, 14, "Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Up", L["Back"], function() self:Back() end)
+	f.back:SetPoint("RIGHT", f.skip, "LEFT", -3, 0)
+	f.dungeon = UI.IconButton(f, 14, "Interface\\TargetingFrame\\UI-TargetingFrame-Skull", L["Point the arrow to the nearest dungeon for your level"], function()
+		local target = f.dungeonTarget
+		if target then
+			ns.SetWaypoint(target.where.zone, target.where.x, target.where.y, target.entry.name or ns.InstanceName(target.entry.id), "guide")
+		end
+	end)
+	f.dungeon:SetPoint("RIGHT", f.back, "LEFT", -3, 0)
+
+	f.body = UI.Text(f, 11, C.muted)
+	f.body:SetPoint("TOPLEFT", PAD + 2, -24)
+	f.body:SetPoint("RIGHT", -PAD, 0)
 	f.body:SetJustifyV("TOP")
 
 	f.rows = UI.Pool(function(parent)
@@ -628,24 +669,29 @@ function Route:CreateWindow()
 		row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 		row.bg = UI.Fill(row, { 1, 1, 1, 0 }, "BACKGROUND")
 		row.bg:SetAllPoints()
-		row.tag = UI.Chip(row, 11)
-		row.tag:SetPoint("TOPLEFT", 0, -5)
-		row.title = UI.Text(row, 13)
-		row.title:SetPoint("TOPLEFT", 76, -6)
-		row.title:SetPoint("RIGHT", -64, 0)
+		row.mark = UI.Fill(row, { 1, 1, 1, 1 }, "ARTWORK")
+		row.mark:SetPoint("TOPLEFT", 2, -4)
+		row.mark:SetSize(3, ROW_H - 8)
+		row.title = UI.Text(row, 12)
+		row.title:SetPoint("TOPLEFT", 10, -2)
+		row.title:SetPoint("RIGHT", -46, 0)
 		row.title:SetWordWrap(false)
-		row.dist = UI.Text(row, 12, C.muted, "RIGHT")
-		row.dist:SetPoint("TOPRIGHT", -4, -7)
-		row.detail = UI.Text(row, 12, C.muted)
-		row.detail:SetPoint("TOPLEFT", row.title, "BOTTOMLEFT", 0, -4)
-		row.detail:SetPoint("RIGHT", -4, 0)
+		row.dist = UI.Text(row, 10, C.muted, "RIGHT")
+		row.dist:SetPoint("TOPRIGHT", -3, -4)
+		row.detail = UI.Text(row, 11, C.muted)
+		row.detail:SetPoint("TOPLEFT", row.title, "BOTTOMLEFT", 0, -1)
+		row.detail:SetPoint("RIGHT", -3, 0)
 		row.detail:SetJustifyV("TOP")
 		row:SetScript("OnEnter", function(r)
 			if not r.first then r.bg:SetVertexColor(1, 1, 1, 0.05) end
+			f:SetAlpha(1)
 			GameTooltip:SetOwner(r, "ANCHOR_LEFT")
-			GameTooltip:AddLine(r.titleText or "")
-			GameTooltip:AddLine(L["Click: point the arrow here"], 0.7, 0.7, 0.7)
-			GameTooltip:AddLine(L["Right-click: skip this quest"], 0.7, 0.7, 0.7)
+			GameTooltip:AddLine(r.titleText or "", 1, 1, 1, true)
+			for _, line in ipairs(r.tipLines or {}) do
+				if line and line ~= "" then GameTooltip:AddLine(line, 0.8, 0.8, 0.8, true) end
+			end
+			GameTooltip:AddLine(L["Click: point the arrow here"], 0.6, 0.6, 0.6)
+			GameTooltip:AddLine(L["Right-click: skip this quest"], 0.6, 0.6, 0.6)
 			GameTooltip:Show()
 		end)
 		row:SetScript("OnLeave", function(r)
@@ -655,22 +701,14 @@ function Route:CreateWindow()
 		return row
 	end)
 
-	f.footer = UI.Text(f, 12, C.muted)
-	f.footer:SetPoint("RIGHT", -12, 0)
-	f.footer:SetWordWrap(true)
-
-	f.back = UI.Button(f, L["Back"], 80, 24, "normal", function() self:Back() end)
-	f.back:SetPoint("BOTTOMLEFT", 14, 10)
-	f.skip = UI.Button(f, L["Done"], 80, 24, "normal", function() self:MarkCurrentDone() end)
-	f.skip:SetPoint("BOTTOMRIGHT", -12, 10)
-	f.dungeon = UI.Button(f, L["Dungeon"], 100, 24, "accent", function()
-		local target = f.dungeonTarget
-		if target then
-			ns.SetWaypoint(target.where.zone, target.where.x, target.where.y, target.entry.name or ns.InstanceName(target.entry.id), "guide")
-		end
+	-- faded while the mouse is elsewhere
+	f:SetScript("OnUpdate", function(frame, elapsed)
+		frame.fade = (frame.fade or 0) + elapsed
+		if frame.fade < 0.2 then return end
+		frame.fade = 0
+		local target = (frame:IsMouseOver() and 1) or self:Settings().idleAlpha or 0.75
+		frame:SetAlpha(target)
 	end)
-	f.dungeon:SetPoint("RIGHT", f.skip, "LEFT", -8, 0)
-	f.dungeon.tooltip = L["Point the arrow to the nearest dungeon for your level"]
 	self.frame = f
 end
 
@@ -687,137 +725,111 @@ function Route:UpdateWindow()
 	end
 	f:Show()
 	f.rows:ReleaseAll()
+	f.body:SetText("")
 	local recording = CharState().recording
-	local y = 38
+	local y = 24
 	if not self.route then
 		f.title:SetText(L["Next quests"])
 		f.progress:SetText(recording and UI.Colorize(string.format(L["Recording: %d steps"], #recording.steps), C.bad) or "")
-		f.body:SetText("")
 		local best = Assistant:Best()
-		for i = 1, math.min(s.assistantCount, #Assistant.steps) do
-			local step = Assistant.steps[i]
-			local row = f.rows:Acquire(f)
-			local tag = TAG[step.kind]
-			row.tag:Set(tag[1], tag[2])
-			row.tag:SetWidth(68)
-			local q = ns.QuestDB[step.id]
-			row.titleText = Assistant:Title(step.id)
-			row.title:SetText(UI.Colorize("[" .. (q[1] > 0 and q[1] or UnitLevel("player")) .. "] ", C.muted) .. row.titleText)
-			row.dist:SetText(step.dist >= 1e6 and L[ns.CONTINENT_NAMES[step.cont] or "Kalimdor"] or string.format(L["%d yards"], step.dist))
-			row.first = i == 1
-			row.bg:SetVertexColor(C.accent[1], C.accent[2], C.accent[3], row.first and 0.12 or 0)
-			local lines = {}
-			if row.first and step.kind == "complete" and C_QuestLog.GetQuestObjectives then
-				for _, obj in ipairs(C_QuestLog.GetQuestObjectives(step.id) or {}) do
-					if obj.text and not ns.IsSecret(obj.text) then
-						lines[#lines + 1] = (obj.finished and "|TInterface\\RaidFrame\\ReadyCheck-Ready:12|t " or "- ") .. UI.Colorize(obj.text, obj.finished and C.good or C.muted)
-					end
-				end
-			end
-			row.detail:SetText(table.concat(lines, "\n"))
-			local h = 26 + (#lines > 0 and (row.detail:GetStringHeight() + 6) or 0)
-			row:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -y)
-			row:SetPoint("RIGHT", f, "RIGHT", -10, 0)
-			row:SetHeight(h)
-			row:SetScript("OnClick", function(_, button)
-				if button == "RightButton" then
-					Assistant.ignored[step.kind .. step.id] = true
-				else
-					Assistant.pinned = step.kind .. step.id
-					ns.SetWorldWaypoint(step.cont, step.x, step.y, Assistant:Title(step.id), OWNER)
-				end
-				self:Refresh()
-			end)
-			y = y + h + 2
-		end
-		if #Assistant.steps == 0 then
-			f.body:SetText(UI.Colorize(L["No quest found around your level. Try another zone or a dungeon."], C.muted))
-			y = y + f.body:GetStringHeight() + 4
-		end
 		local dungeons = s.suggestDungeons and Assistant:SuggestedDungeons() or {}
-		if dungeons[1] then
-			local names = {}
-			for i = 1, math.min(3, #dungeons) do
-				local e = dungeons[i].entry
-				names[#names + 1] = UI.Colorize(e.name or ns.InstanceName(e.id), C.text) .. UI.Colorize(string.format(" %d-%d", e.min, e.max), C.muted)
-			end
-			f.footer:SetText(L["Dungeons for your level:"] .. " " .. table.concat(names, ", "))
-		else
-			f.footer:SetText("")
+		local names = {}
+		for i = 1, math.min(3, #dungeons) do
+			local e = dungeons[i].entry
+			names[#names + 1] = (e.name or ns.InstanceName(e.id)) .. string.format(" %d-%d", e.min, e.max)
 		end
+		f.tip = #names > 0 and (L["Dungeons for your level:"] .. " " .. table.concat(names, ", ")) or L["Next quests"]
 		f.dungeon:SetShown(dungeons[1] ~= nil)
 		f.dungeonTarget = dungeons[1]
 		f.back:Hide()
-		f.skip:SetText(L["Skip"])
 		f.skip.tooltip = L["Skip this quest and point to the next one"]
 		f.skip:SetShown(best ~= nil)
+		if not s.collapsed then
+			for i = 1, math.min(s.assistantCount, #Assistant.steps) do
+				local step = Assistant.steps[i]
+				local row = f.rows:Acquire(f)
+				SetRow(row, step.kind, i == 1)
+				local q = ns.QuestDB[step.id]
+				row.titleText = Assistant:Title(step.id)
+				row.tipLines = nil
+				row.title:SetText(UI.Colorize((q[1] > 0 and q[1] or UnitLevel("player")) .. " ", C.muted) .. row.titleText)
+				row.dist:SetText(step.dist >= 1e6 and L[ns.CONTINENT_NAMES[step.cont] or "Kalimdor"] or string.format(L["%d yards"], step.dist))
+				local lines = {}
+				if i == 1 and step.kind == "complete" and C_QuestLog.GetQuestObjectives then
+					for _, obj in ipairs(C_QuestLog.GetQuestObjectives(step.id) or {}) do
+						if obj.text and not ns.IsSecret(obj.text) then
+							lines[#lines + 1] = UI.Colorize(obj.text, obj.finished and C.good or C.muted)
+						end
+					end
+				end
+				row:SetScript("OnClick", function(_, button)
+					if button == "RightButton" then
+						Assistant.ignored[step.kind .. step.id] = true
+					else
+						Assistant.pinned = step.kind .. step.id
+						ns.SetWorldWaypoint(step.cont, step.x, step.y, Assistant:Title(step.id), OWNER)
+					end
+					self:Refresh()
+				end)
+				y = PlaceRow(f, row, y, table.concat(lines, "\n"))
+			end
+			if #Assistant.steps == 0 then
+				f.body:SetText(L["No quest found around your level. Try another zone or a dungeon."])
+				y = y + f.body:GetStringHeight() + 4
+			end
+		end
 	else
 		f.dungeon:Hide()
 		local state = CharState()
 		local route = self.route
 		f.title:SetText(route.name or route.id)
-		f.progress:SetFormattedText("%d / %d", state.step, #route.steps)
-		f.body:SetText("")
-		local shown = 0
-		local index = state.step
-		while index <= #route.steps and shown < s.stepsShown do
-			local step = route.steps[index]
-			if index == state.step or not self:IsStepDone(route, index) then
-				shown = shown + 1
-				local row = f.rows:Acquire(f)
-				local tag = TAG[step[1]] or TAG.note
-				row.tag:Set(tag[1], tag[2])
-				row.tag:SetWidth(68)
-				row.first = index == state.step
-				row.titleText = self:StepText(step, true)
-				local lvl = step.quest and ns.QuestDB and ns.QuestDB[step.quest]
-				row.title:SetText((lvl and UI.Colorize("[" .. lvl[1] .. "] ", C.muted) or "") .. row.titleText)
-				row.title:SetTextColor(row.first and 1 or 0.85, row.first and 1 or 0.85, row.first and 1 or 0.85)
-				row.dist:SetText("")
-				if step.wx then
-					local cont, wx, wy = ns.PlayerWorldPosition()
-					if cont == step.cont and wx then
-						row.dist:SetText(string.format(L["%d yards"], math.floor(math.sqrt((wx - step.wx) ^ 2 + (wy - step.wy) ^ 2))))
-					end
-				end
-				row.bg:SetVertexColor(C.accent[1], C.accent[2], C.accent[3], row.first and 0.12 or 0)
-				local detail = ""
-				if row.first then
-					local full = self:StepText(step)
-					detail = full:match("^[^\n]*\n(.*)$") or ""
-				elseif step.npc then
-					detail = UI.Colorize(step.npc, C.muted)
-				end
-				row.detail:SetText(detail)
-				local h = 26 + (detail ~= "" and (row.detail:GetStringHeight() + 6) or 0)
-				row:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -y)
-				row:SetPoint("RIGHT", f, "RIGHT", -10, 0)
-				row:SetHeight(h)
-				local stepIndex = index
-				row:SetScript("OnClick", function(_, button)
-					if button == "RightButton" then
-						CharState().manualDone[route.id .. ":" .. stepIndex] = true
-						self:Advance()
-					elseif step.wx or step.map then
-						self:PointAt(step)
-					end
-				end)
-				y = y + h + 2
-			end
-			index = index + 1
-		end
-		f.footer:SetText(string.format(L["Route levels %d-%d"], route.minLevel, route.maxLevel) .. (route.auto and ("  ·  " .. L["built-in route"]) or ""))
+		f.progress:SetFormattedText("%d/%d", state.step, #route.steps)
+		f.tip = string.format(L["Route levels %d-%d"], route.minLevel, route.maxLevel) .. (route.auto and ("  ·  " .. L["built-in route"]) or "")
 		f.back:SetShown(state.step > 1)
-		f.skip:SetText(L["Done"])
 		f.skip.tooltip = L["Mark this step as done"]
 		f.skip:Show()
+		if not s.collapsed then
+			local shown, index = 0, state.step
+			while index <= #route.steps and shown < s.stepsShown do
+				local step = route.steps[index]
+				if index == state.step or not self:IsStepDone(route, index) then
+					shown = shown + 1
+					local first = index == state.step
+					local row = f.rows:Acquire(f)
+					SetRow(row, step[1], first)
+					row.titleText = self:StepText(step, true)
+					local kindLabel = UI.Colorize(((TAG[step[1]] or TAG.note)[1] or "") .. " ", KindColor(step[1]))
+					row.title:SetText(kindLabel .. row.titleText)
+					row.title:SetTextColor(first and 1 or 0.8, first and 1 or 0.8, first and 1 or 0.8)
+					row.dist:SetText("")
+					if step.wx then
+						local cont, wx, wy = ns.PlayerWorldPosition()
+						if cont == step.cont and wx then
+							row.dist:SetText(string.format(L["%d yards"], math.floor(math.sqrt((wx - step.wx) ^ 2 + (wy - step.wy) ^ 2))))
+						end
+					end
+					local full = self:StepText(step)
+					local rest = full:match("^[^\n]*\n(.*)$")
+					row.tipLines = { rest }
+					local detail
+					if first then detail = rest end
+					local stepIndex = index
+					row:SetScript("OnClick", function(_, button)
+						if button == "RightButton" then
+							CharState().manualDone[route.id .. ":" .. stepIndex] = true
+							self:Advance()
+						elseif step.wx or step.map then
+							self:PointAt(step)
+						end
+					end)
+					y = PlaceRow(f, row, y, detail)
+				end
+				index = index + 1
+			end
+		end
 	end
-	y = self:AddUpgradeRows(f, y)
-	f.footer:ClearAllPoints()
-	f.footer:SetPoint("TOPLEFT", f, "TOPLEFT", 14, -(y + 6))
-	f.footer:SetPoint("RIGHT", f, "RIGHT", -12, 0)
-	local footer = f.footer:GetText() ~= "" and f.footer:GetStringHeight() + 10 or 0
-	f:SetHeight(y + footer + 46)
+	if not s.collapsed then y = self:AddUpgradeRows(f, y) end
+	f:SetHeight(y + (s.collapsed and 0 or PAD - 2))
 end
 
 function ns.ToggleRouteWindow()
@@ -1083,6 +1095,7 @@ function Route:GetOptions()
 			autoRoutes = { type = "toggle", order = 9.1, width = "full", name = L["Follow the built-in leveling route of my race and class (1-60)"] },
 			routeDungeons = { type = "toggle", order = 9.15, width = "full", name = L["Include the dungeons in the route (off: solo leveling, they are skipped)"] },
 			stepsShown = { type = "range", order = 9.2, name = L["Route steps listed"], min = 1, max = 10, step = 1 },
+			idleAlpha = { type = "range", order = 9.25, name = L["Opacity when the mouse is elsewhere"], min = 0.2, max = 1, step = 0.05, isPercent = true },
 			style = {
 				type = "select", order = 5, name = L["Route style"],
 				values = { quests = L["Quests only"], dungeons = L["Quests and dungeons"], fastest = L["Fastest"] },

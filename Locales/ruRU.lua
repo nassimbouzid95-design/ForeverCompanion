@@ -714,3 +714,7 @@ L["Follow the built-in leveling route of my race and class (1-60)"] = "След�
 L["%s is not offered to you: step passed."] = "%s вам не предлагается: шаг пропущен."
 L["No built-in route for your race and class yet."] = "Пока нет встроенного маршрута для вашей расы и класса."
 L["Leveling route: %s (levels %d-%d), followed automatically."] = "Маршрут прокачки: %s (уровни %d-%d), отслеживается автоматически."
+
+-- new
+L["Click: fold or unfold"] = "Щелчок: свернуть или развернуть"
+L["Opacity when the mouse is elsewhere"] = "Прозрачность, когда курсор в другом месте"
