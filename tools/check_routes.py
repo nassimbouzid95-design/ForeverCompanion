@@ -65,4 +65,5 @@ for (start, cls), parts in sorted(routes.items()):
 print('%d routes (%d start x class), %d steps' % (sum(len(v) for v in routes.values()), len(routes), sum(len(p[5]) for v in routes.values() for p in v)))
 for k, v in problems.most_common():
     print('%-22s %5d   e.g. %s' % (k, v, ' | '.join(examples[k][:3])))
+    if '-v' in sys.argv: print('\n'.join('   ' + e for e in examples[k]))
 sys.exit(1 if problems else 0)

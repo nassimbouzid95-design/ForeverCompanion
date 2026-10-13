@@ -66,6 +66,9 @@ taux de drop, rerolls, sacs, carte, campements, interface et sécurité.
 - **Quêtes de donjon** (`Data/DungeonQuests.lua`) : 547 quêtes reliées à leur donjon ou raid, avec récompenses, d'après CMaNGOS.
 - **Routes de leveling intégrées** (`Data/RoutesAuto.lua`) : calculées par `tools/gen_routes.py` à partir de la base de quêtes
   (niveaux, enchaînements, distances, XP des quêtes et des monstres, donjons). Une route par race et par classe : le simulateur essaie plusieurs réglages et garde le plus rapide.
+  Du niveau 1 à environ 22, l'ordre des étapes reprend les guides Forever de **RestedXP**
+  ([RXPGuides](https://github.com/RestedXP/RXPGuides), licence [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)),
+  importés par `tools/import_rxp.py` ; la suite (environ 22-60) est calculée par le simulateur.
 - **Équipement, talents, sorts, rotations** (`Data/GearGuide.lua`, `Data/ClassGuide.lua`) : générés depuis CMaNGOS
   (statistiques des objets, récompenses de quêtes, butin, sorts des maîtres de classe) avec des pondérations de stats de leveling.
 - **Taux mesurés** : le collecteur compte les objets tombés en jeu et les affiche à côté des taux de la base.
@@ -90,3 +93,7 @@ taux de drop, rerolls, sacs, carte, campements, interface et sécurité.
 ## Licence
 
 GPL v3 (voir `LICENSE`), à cause des données reprises d'AtlasLootClassic et de CMaNGOS.
+
+Exception : la partie des routes de leveling reprise des guides RestedXP (niveaux 1 à environ 22 dans `Data/RoutesAuto.lua`,
+) reste sous licence **CC BY-NC-SA 4.0** de ses auteurs (RestedXP) :
+crédit obligatoire, usage non commercial uniquement, partage dans les mêmes conditions.

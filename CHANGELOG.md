@@ -1,5 +1,11 @@
 # ForeverCompanion
 
+## v2.6.0
+
+- Levels 1 to about 22: the leveling routes now follow the RestedXP Forever guides step by step, in their order, with quests grouped the way they do (accept everything around, do the objectives together, hand everything in at once). Credit: RXPGuides by RestedXP (https://github.com/RestedXP/RXPGuides), CC BY-NC-SA 4.0; that part of the routes keeps this licence.
+- Every race and class has its own version of these guides (Orcs and Trolls through Tirisfal Glades and Silverpine Forest like RestedXP, Hunters with their own start, Night Elves to Darkshore...). About 95 % of the RestedXP quests are kept; the others are missing from the Forever quest database or placed on the wrong continent in it.
+- From about level 22 to 60 the route is still computed by the simulator, starting from where the RestedXP part ends.
+
 ## v2.5.3
 
 - Routes checked against tested leveling guides, quest by quest, for levels 1 to 22, and corrected:

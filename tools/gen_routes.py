@@ -47,6 +47,10 @@ CLASSES = list(CLASS_BIT)
 CAPITALS = {1637, 1638, 1497, 1519, 1537, 1657}
 HOME = {'orc': ({14, 363}, 12), 'tauren': ({215, 220}, 12), 'undead': ({85, 154}, 12), 'human': ({12, 9}, 11),
         'dwarf': ({1, 132}, 11), 'nightelf': ({141, 188}, 11), 'skyborne-a': ({16593}, 12), 'skyborne-h': ({16593}, 12)}
+# Levels 1 to about 22: the steps of the RestedXP Forever guides (RXPGuides by RestedXP, CC BY-NC-SA 4.0), imported
+# by tools/import_rxp.py.  They are played first, then the simulation goes on from where they end.
+SCRIPTS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'v2-data', 'rxp_scripts.json')
+SCRIPTS = json.load(open(SCRIPTS_FILE)) if os.path.exists(SCRIPTS_FILE) else {}
 HOME_RATE = 0.01  # at home every quest that gives experience is done (the leveling guides do them all)
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -395,6 +399,58 @@ class Sim:
         self.steps.append(('dungeon', inst, key, lvl0))
         self.dungeons_done.add(key)
 
+    # -- imported guide steps ------------------------------------------------------------------------------------
+    def play(self, kind, qid, p):
+        q = QDB[qid]; qi = QINFO[qid]
+        t0, x0, l0 = self.time, self.level * 1e6 + self.xp, self.level
+        self.move(p)
+        if kind == 'accept':
+            self.log[qid] = True
+            self.time += 5
+            if q['excl'] > 0: self.excl.add(q['excl'])
+        elif kind == 'complete':
+            self.done_obj.add(qid)
+            self.time += qi['kills'] * kill_time(self.level) + qi['inter'] * 8 + max(0, len(q['o']) - 1) * 15
+            ql = q['lvl'] if q['lvl'] > 0 else self.level
+            self.gain(int(qi['kills'] * mob_xp(min(ql, self.level))))
+        else:
+            if qid not in self.done_obj and (qi['kills'] or qi['inter']):
+                self.time += qi['kills'] * kill_time(self.level) + qi['inter'] * 8
+                self.gain(int(qi['kills'] * mob_xp(min(q['lvl'] if q['lvl'] > 0 else self.level, self.level))))
+            del self.log[qid]; self.turned.add(qid)
+            self.time += 8
+            self.gain(quest_xp(qid, self.level))
+        self.steps.append((kind, qid, p, l0))
+        self.quest_time = self.quest_time * 0.995 + (self.time - t0)
+        self.quest_xp = self.quest_xp * 0.995 + (self.level * 1e6 + self.xp - x0 if self.level == l0 else XP_TO_LEVEL[l0] - (x0 - l0 * 1e6) + self.xp)
+
+    def play_script(self):
+        pool = set(self.pool)
+        script = [st for st in SCRIPTS.get('%s-%s' % (self.key, self.cls), []) if st[1] in QDB]
+        # the continent the guide is on around each step (majority of nearby quest givers); a quest whose giver
+        # sits elsewhere in our data (reused ids, bad positions) is left out, an objective elsewhere is done in place
+        conts = [QDB[qid]['s'][0] for _, qid in script]
+        def here(i):
+            w = conts[max(0, i - 8):i + 9]
+            return max(set(w), key=w.count)
+        bad = {qid for i, (kind, qid) in enumerate(script) if kind == 'accept' and conts[i] != here(i)}
+        self.rxp_skipped = sorted(bad)
+        for i, (kind, qid) in enumerate(script):
+            q = QDB[qid]
+            if qid in bad: continue
+            c = here(i)
+            if kind == 'accept':
+                if qid in self.turned or qid in self.log or qid not in pool or (q['excl'] > 0 and q['excl'] in self.excl): continue
+                if not self.available(qid, dict(q, min=0)): continue
+                self.play(kind, qid, q['s'])
+            elif kind == 'complete':
+                if qid not in self.log or qid in self.done_obj: continue
+                objs = [o for o in (q['o'] or [q['s']]) if o[0] == c] or [self.pos]
+                self.play(kind, qid, min(objs, key=lambda x: travel(self.pos, x, self.level)))
+            elif qid in self.log:
+                self.play(kind, qid, q['e'] if q['e'][0] == c else self.pos)
+        self.scripted = len(self.steps)
+
     # -- main loop ---------------------------------------------------------------------------------------------
     def run(self):
         P = self.P
@@ -402,6 +458,7 @@ class Sim:
             first = [qid for qid, q in QDB.items() if q['lvl'] <= 1 and q['s'][0] < 0 and self.available(qid, q)]
             self.pos = QDB[min(first)]['s'] if first else (0, 0, 0)
         self.start_zone = self.pos
+        if self.P.get('rxp', True): self.play_script()
         guard = 0
         while self.level < 60 and guard < 20000:
             guard += 1
@@ -559,7 +616,7 @@ def pack(sim):
         if kind in ('accept', 'complete', 'turnin'):
             qid, p, lv = s[1], s[2], s[3]
             tok = {'accept': 'a', 'complete': 'c', 'turnin': 't'}[kind] + str(qid)
-            if kind == 'complete' and QDB[qid]['o'] and tuple(p) != tuple(QDB[qid]['o'][0]):
+            if kind == 'complete' and tuple(p) in [tuple(x) for x in QDB[qid]['o'][1:]]:
                 tok += '@%d' % [tuple(x) for x in QDB[qid]['o']].index(tuple(p))
             cur['tokens'].append(tok)
             cur['min'] = lv if cur['min'] is None else min(cur['min'], lv)
@@ -630,6 +687,9 @@ def main():
            '-- Built by tools/gen_routes.py from the WoW Forever quest database (QuestieDB Forever data, GPL v3): new and',
            '-- changed Forever quests included, simulated with walking/riding time, kill time, quest and kill experience,',
            '-- dungeons when they level at least 75 % as fast as questing (their loot makes up for the rest).  Steps are packed (format in Data/Routes.lua).',
+           '-- Levels 1 to about 22 follow the step order of the RestedXP Forever guides (RXPGuides by RestedXP,',
+           '-- https://github.com/RestedXP/RXPGuides), licensed CC BY-NC-SA 4.0 (https://creativecommons.org/licenses/by-nc-sa/4.0/):',
+           '-- that part of this file is shared under the same licence, non-commercial use only.',
            'local _, ns = ...', 'local R = ns.RegisterPackedRoute', '']
     report = {}
     starts = [st for st in STARTS if not only or st[0] in only]
