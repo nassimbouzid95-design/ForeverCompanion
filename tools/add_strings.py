@@ -4,7 +4,7 @@ import json, sys, os, re
 base = '/mnt/project-files/addon/ForeverCompanion/Locales/'
 data = json.load(open(sys.argv[1]))
 section = sys.argv[2] if len(sys.argv) > 2 else 'new'
-def esc(x): return x.replace('\\', '\\\\').replace('"', '\\"')
+def esc(x): return x.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
 def have(path):
     return set(re.findall(r'^L\["((?:[^"\\]|\\.)*)"\]', open(path).read(), re.M)) if os.path.exists(path) else set()
 en = base + 'enUS.lua'

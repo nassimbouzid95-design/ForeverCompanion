@@ -1,5 +1,11 @@
 # ForeverCompanion
 
+## v2.5.0
+
+- First time a leveling route is picked for a character, a window asks: follow it, choose another start in /fc lvl, or no thanks (the step window then shows the quests around you; /fc lvl to follow a route again).
+- Zephras Isle can now be left at any time by the airship of Valanaar (Dalaran for the Alliance, near Thunder Bluff for the Horde): the route says when to take it and points to the dock.
+- Routes computed again for every race and class: the simulator now also tries leaving the starting area earlier (levels 6 to 12) and keeps it when the route gets faster. 26 routes are faster, 1 to 60 now in 101.6 to 109.6 hours.
+
 ## v2.4.3
 
 - Arrow: smaller, and it no longer disappears when you get close to the quest giver. It stays on them until the quest is accepted or turned in, and its title shows the NPC's name.

@@ -718,3 +718,11 @@ L["Leveling route: %s (levels %d-%d), followed automatically."] = "Percorso di l
 -- new
 L["Click: fold or unfold"] = "Clic: comprimi o espandi"
 L["Opacity when the mouse is elsewhere"] = "Opacità quando il mouse è altrove"
+
+-- new
+L["Follow it"] = "Seguila"
+L["No, thanks"] = "No, grazie"
+L["Choose"] = "Scegli"
+L["Route off: the window shows the quests around you. /fc lvl to follow a route again."] = "Percorso disattivato: la finestra mostra le missioni intorno a te. /fc lvl per seguire di nuovo un percorso."
+L["Follow the leveling route made for your race and class?\n%s (levels %d-%d)"] = "Seguire il percorso di livellamento fatto per la tua razza e classe?\n%s (livelli %d-%d)"
+L["Take the airship to %s"] = "Prendi l'aeronave per %s"

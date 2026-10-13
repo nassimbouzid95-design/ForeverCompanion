@@ -718,3 +718,11 @@ L["Leveling route: %s (levels %d-%d), followed automatically."] = true
 -- new
 L["Click: fold or unfold"] = true
 L["Opacity when the mouse is elsewhere"] = true
+
+-- new
+L["Follow it"] = true
+L["No, thanks"] = true
+L["Choose"] = true
+L["Route off: the window shows the quests around you. /fc lvl to follow a route again."] = true
+L["Follow the leveling route made for your race and class?\n%s (levels %d-%d)"] = true
+L["Take the airship to %s"] = true

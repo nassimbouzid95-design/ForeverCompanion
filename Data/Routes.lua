@@ -108,9 +108,9 @@ local function Expand(route)
 				if entry.key == key then step.instance = entry.id; step.entry = entry break end
 			end
 		elseif kind == "g" then
-			local c, x, y, z, ship = rest:match("^(-?%d+),(-?%d+),(-?%d+),(%d+),?(s?)$")
+			local c, x, y, z, ship = rest:match("^(-?%d+),(-?%d+),(-?%d+),(%d+),?([sa]?)$")
 			if c then
-				step = { "goto", zone = ns.RouteZoneName(tonumber(z)), ship = ship == "s" or nil }
+				step = { "goto", zone = ns.RouteZoneName(tonumber(z)), ship = ship == "s" or nil, airship = ship == "a" or nil }
 				local c0, x0, y0 = tonumber(c), tonumber(x), tonumber(y)
 				step.cont, step.wx, step.wy = ns.ResolvePosition(c0, x0, y0)
 				if c0 < 0 then step.map, step.x, step.y = -c0, x0 / 10000, y0 / 10000 end

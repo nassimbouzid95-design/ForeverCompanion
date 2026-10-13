@@ -25,6 +25,7 @@ local Route = ns.NewModule("Route", {
 })
 ns.RegisterDefaults("char", "Route", {
 	routeID = nil,
+	routeMode = nil, -- nil: not asked yet, "follow", "off" (nearby quests only)
 	step = 1,
 	manualDone = {}, -- ["routeID:step"] = true
 	finished = {},   -- [routeID] = true
@@ -329,6 +330,10 @@ end
 function Route:ChooseRoute()
 	local state = CharState()
 	local level = UnitLevel("player")
+	if state.routeMode == "off" then
+		state.routeID = nil
+		return nil
+	end
 	local current = state.routeID and self:FindRoute(state.routeID)
 	if current then
 		-- a route picked by hand for another class or race (or from an older version) is replaced
@@ -346,6 +351,7 @@ function Route:ChooseRoute()
 				state.step = 1
 				if route.auto then
 					ns.Print(string.format(L["Leveling route: %s (levels %d-%d), followed automatically."], route.name or "", route.minLevel, route.maxLevel))
+					if not state.routeMode then self:AskRoute(route) end
 				end
 			end
 			return route
@@ -353,6 +359,41 @@ function Route:ChooseRoute()
 	end
 	state.routeID = nil
 	return nil
+end
+
+-- First time a built-in route is picked for this character: asks whether to follow it (the route is followed
+-- meanwhile), to pick another start in /fc lvl, or to only see the quests around you.
+StaticPopupDialogs["FOREVERCOMPANION_ROUTE"] = {
+	text = "%s",
+	button1 = L["Follow it"],
+	button2 = L["No, thanks"],
+	button3 = L["Choose"],
+	OnAccept = function() CharState().routeMode = "follow" end,
+	OnCancel = function(_, _, reason)
+		if reason == "clicked" then
+			CharState().routeMode = "off"
+			ns.Print(L["Route off: the window shows the quests around you. /fc lvl to follow a route again."])
+			Route:Advance()
+		end
+	end,
+	OnAlt = function()
+		CharState().routeMode = "follow"
+		if ns.ToggleClassGuide then ns.ToggleClassGuide("route") end
+	end,
+	timeout = 0,
+	whileDead = true,
+	hideOnEscape = true,
+	preferredIndex = 3,
+}
+
+function Route:AskRoute(route)
+	if self.asked or InCombatLockdown() then return end
+	self.asked = true
+	C_Timer.After(3, function()
+		if CharState().routeMode then return end
+		StaticPopup_Show("FOREVERCOMPANION_ROUTE", "ForeverCompanion\n\n" .. string.format(
+			L["Follow the leveling route made for your race and class?\n%s (levels %d-%d)"], route.name or "", route.minLevel, route.maxLevel))
+	end)
 end
 
 -- Remembers the dungeons the character entered (dungeon steps of the routes).
@@ -540,6 +581,8 @@ function Route:StepText(step, short)
 	elseif kind == "dungeon" then
 		body = step.entry and ns.InstanceEntryName and ns.InstanceEntryName(step.entry) or ns.InstanceName(step.instance)
 		if not short then body = body .. "\n|cffbbbbbb" .. L["Group up for this dungeon (Group Finder or /4 LookingForGroup), do its quests inside, then continue the route."] .. "|r" end
+	elseif kind == "goto" and step.airship then
+		body = string.format(L["Take the airship to %s"], step.zone or "")
 	elseif kind == "goto" and step.zone then
 		body = string.format(L["Travel to %s"], step.zone)
 		if step.ship and not short then
@@ -1132,7 +1175,7 @@ ns.RegisterCommand("route", L["route window | record [name] | stop | note <text>
 		end)
 	elseif sub == "reset" then
 		local state = CharState()
-		state.routeID, state.step = nil, 1
+		state.routeID, state.step, state.routeMode = nil, 1, "follow"
 		wipe(state.manualDone)
 		wipe(state.finished)
 		Route:Advance()

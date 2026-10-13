@@ -200,12 +200,22 @@ FLIGHT = 28.0        # yards per second on a flight path, plus FLIGHT_WAIT
 FLIGHT_WAIT = 50
 
 OPEN_MAPS = {1: (-2652,)}
-CLOSED_MAPS = {-2521}   # Shen'dralas is entered from Desolace
+CLOSED_MAPS = set()
+# Zephras Isle (Skyborne start): left at any time by the airship of Valanaar, to Dalaran (Alliance) or near Thunder
+# Bluff (Horde), and back.  Docks: the givers of the two quests that send you off the isle, and where they end.
+ZEPHRAS = -2521
+AIRSHIPS = {1: ((ZEPHRAS, 6659, 7992), (0, 450, 437)), 2: ((ZEPHRAS, 5915, 7973), (1, -656, 424))}
+AIRSHIP_TIME = 200      # waiting for it and the flight
+AIRSHIP = [AIRSHIPS[1]]  # set by Sim() for its faction
 
 def travel(a, b, level):
     if a is None or b is None: return 0
+    if a[0] != b[0] and ZEPHRAS in (a[0], b[0]):
+        dock, land = AIRSHIP[0]
+        if a[0] == ZEPHRAS: return travel(a, dock, level) + AIRSHIP_TIME + travel(land, b, level)
+        return travel(a, land, level) + AIRSHIP_TIME + travel(dock, b, level)
     if a[0] != b[0]:
-        if a[0] in CLOSED_MAPS: return 1e6                                 # Zephras Isle: left by its last quest
+        if a[0] in CLOSED_MAPS: return 1e6
         if b[0] < 0 and b[0] not in OPEN_MAPS.get(a[0], ()): return 1e6   # cannot walk to Zephras Isle
         return PORTAL if a[0] < 0 or b[0] < 0 else SHIP
     d = math.hypot(a[1] - b[1], a[2] - b[2]) * (SEPARATE_SCALE if a[0] < 0 else 1)
@@ -239,6 +249,7 @@ class Sim:
         self.cls = cls
         self.P = P
         self.side = 1 if self.faction == 'Alliance' else 2
+        AIRSHIP[0] = AIRSHIPS[self.side]
         self.rbits = 0
         for r in races: self.rbits |= RACE_BIT[r]
         self.cbit = CLASS_BIT[cls]
@@ -250,6 +261,7 @@ class Sim:
         self.pool = [qid for qid, q in QDB.items() if q['side'] in (0, self.side) and (not q['races'] or q['races'] & self.rbits)
                      and (not q['classes'] or q['classes'] & self.cbit)]
         self.pos = self.start_pos
+        self.start_zone = None
         self.quest_time = 0.0; self.quest_xp = 0.0
         self.grind_xp = 0
 
@@ -295,9 +307,15 @@ class Sim:
             t += travel(q['s'], q['e'], self.level)
         return t
 
+    def in_start_area(self, p):
+        """The starting area: the whole isle for Zephras, else 700 yards around where the character appears."""
+        a = self.start_zone
+        if not a or not p or a[0] != p[0]: return False
+        return a[0] < 0 or math.hypot(a[1] - p[1], a[2] - p[2]) < 700
+
     def worthwhile(self, qid):
         q = QDB[qid]; qi = QINFO[qid]
-        if q['classes'] or qid in TRANSIT or q['s'][0] in CLOSED_MAPS: return True   # the start island is done entirely                                  # class quests: spells, pets, forms
+        if q['classes']: return True   # class quests: spells, pets, forms
         if qi['elite']: return False
         if qid in DQ_OF:
             d = DUNGEON_BY_KEY.get(DQ_OF[qid])
@@ -305,6 +323,8 @@ class Sim:
             lo, hi = d[3]
             if sum(1 for x in self.log if x in DQ_OF) >= 8: return False
             return lo - 4 <= self.level <= hi and quest_xp(qid, hi) > 0
+        # leave: from this level on, no more new quests of the starting zone (go on to the next zones)
+        if self.level >= self.P['leave'] and self.in_start_area(q['s']): return False
         ql = q['lvl'] if q['lvl'] > 0 else self.level
         if ql > self.level + (2 if self.level < 10 else self.P['lead']): return False
         if ql < self.level - self.P['grey']: return False
@@ -322,8 +342,11 @@ class Sim:
         if t >= 1e6: t = PORTAL
         ship = self.pos is not None and p is not None and self.pos[0] != p[0]
         self.time += t
+        if ship and ZEPHRAS in (self.pos[0], p[0]):
+            # first to the airship dock (or from the landing), then the trip
+            self.steps.append(('goto', AIRSHIP[0][0] if self.pos[0] == ZEPHRAS else AIRSHIP[0][1], False, True))
         if self.pos is None or ship or t > self.P['goto']:
-            self.steps.append(('goto', p, ship))
+            self.steps.append(('goto', p, ship and ZEPHRAS not in (self.pos[0] if self.pos else None, p[0])))
         self.pos = p
         return t
 
@@ -362,6 +385,7 @@ class Sim:
         if self.pos is None:
             first = [qid for qid, q in QDB.items() if q['lvl'] <= 1 and q['s'][0] < 0 and self.available(qid, q)]
             self.pos = QDB[min(first)]['s'] if first else (0, 0, 0)
+        self.start_zone = self.pos
         guard = 0
         while self.level < 60 and guard < 20000:
             guard += 1
@@ -435,7 +459,7 @@ class Sim:
 
 # dungeon_factor: a dungeon goes in the route when it levels at least 75 % as fast as questing at that point; its
 # loot (best-in-slot items of that level) and its quests make up for the rest, so it is not tuned away.
-DEFAULT = dict(lead=3, grey=5, min_rate=0.6, chain=0.5, tw=1.0, goto=240, dungeons=True, dungeon_factor=0.75,
+DEFAULT = dict(leave=99, lead=3, grey=5, min_rate=0.6, chain=0.5, tw=1.0, goto=240, dungeons=True, dungeon_factor=0.75,
                run_base=1500, run_boss=240, group_xp=1.0, lfg=600)
 
 
@@ -447,7 +471,8 @@ def tune(start, cls, base=DEFAULT):
     """Coordinate search on the route parameters: keeps any change that shortens the simulated 1-60."""
     best_p = dict(base)
     best = simulate(start, cls, best_p)
-    grid = dict(lead=[2, 3, 4, 5, 6], grey=[3, 4, 5, 6, 7, 8], min_rate=[0.3, 0.45, 0.6, 0.8, 1.0, 1.3], chain=[0, 0.5, 1, 1.5], tw=[1.0, 1.5, 2.0, 3.0, 5.0])
+    grid = dict(lead=[2, 3, 4, 5, 6], grey=[3, 4, 5, 6, 7, 8], min_rate=[0.3, 0.45, 0.6, 0.8, 1.0, 1.3], chain=[0, 0.5, 1, 1.5], tw=[1.0, 1.5, 2.0, 3.0, 5.0], leave=[6, 8, 9, 10, 11, 12, 99])
+    if '--leave' in sys.argv: grid = dict(leave=grid['leave'])     # only when to leave the starting area
     tried = 1
     for _round in range(3):
         improved = False
@@ -502,6 +527,11 @@ def pack(sim):
             chapters.append(cur)
     for si, s in enumerate(sim.steps):
         kind = s[0]
+        if kind == 'goto' and len(s) > 3:
+            p = s[1]
+            if cur is None: cur = dict(tokens=[], min=None, max=None, names=collections.Counter())
+            cur['tokens'].append('g%d,%d,%d,%d,a' % (p[0], p[1], p[2], zone_index(dest.get(si) or 'Leveling')))
+            continue
         if kind == 'goto':
             p, ship = s[1], s[2]
             # a new chapter at each long trip
@@ -575,7 +605,7 @@ def tune_job(args):
 
 def main():
     import multiprocessing
-    do_tune = '--tune' in sys.argv
+    do_tune = '--tune' in sys.argv or '--leave' in sys.argv
     only = [a for a in sys.argv[1:] if not a.startswith('--')]
     out = ['-- ForeverCompanion: leveling routes 1-60 for each starting area and class (generated, do not edit by hand).',
            '-- Built by tools/gen_routes.py from the WoW Forever quest database (QuestieDB Forever data, GPL v3): new and',

@@ -718,3 +718,11 @@ L["Leveling route: %s (levels %d-%d), followed automatically."] = "Маршру�
 -- new
 L["Click: fold or unfold"] = "Щелчок: свернуть или развернуть"
 L["Opacity when the mouse is elsewhere"] = "Прозрачность, когда курсор в другом месте"
+
+-- new
+L["Follow it"] = "Следовать"
+L["No, thanks"] = "Нет, спасибо"
+L["Choose"] = "Выбрать"
+L["Route off: the window shows the quests around you. /fc lvl to follow a route again."] = "Маршрут отключён: окно показывает задания рядом с вами. /fc lvl, чтобы снова следовать маршруту."
+L["Follow the leveling route made for your race and class?\n%s (levels %d-%d)"] = "Следовать маршруту прокачки для вашей расы и класса?\n%s (уровни %d-%d)"
+L["Take the airship to %s"] = "Отправляйтесь на дирижабле в %s"

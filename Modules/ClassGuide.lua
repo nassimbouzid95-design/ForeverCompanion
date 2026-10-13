@@ -326,6 +326,7 @@ function Guide:PageRoute()
 			onClick = function()
 				state.routeID, state.step = route.id, 1
 				state.finished[route.id] = nil
+				state.routeMode = "follow"
 				if Route then
 					Route:Settings().showWindow = true
 					Route:Advance()
