@@ -62,6 +62,12 @@ local function QuestPoint(q, i)
 	if q then return q[i], q[i + 1], q[i + 2] end
 end
 
+-- Map position (uiMapID, x, y as fractions) of a point of a new zone, kept by ns.ResolveNewZones.
+local function MapPoint(step, m)
+	if m then step.map, step.x, step.y = m[1], m[2], m[3] end
+	if step.cont and step.cont < 0 then step.map, step.x, step.y = -step.cont, step.wx / 10000, step.wy / 10000 end
+end
+
 local function Expand(route)
 	local steps = {}
 	local npcs, names = ns.QuestNPCs or {}, ns.QuestNPCNames or {}
@@ -76,9 +82,11 @@ local function Expand(route)
 			if kind == "a" then
 				step = { "accept", quest = id, npc = who and names[who[1]] or nil }
 				step.cont, step.wx, step.wy = QuestPoint(q, 8)
+				MapPoint(step, q and q.sm)
 			elseif kind == "t" then
 				step = { "turnin", quest = id, npc = who and names[who[2]] or nil }
 				step.cont, step.wx, step.wy = QuestPoint(q, 11)
+				MapPoint(step, q and q.em)
 			elseif kind == "c" then
 				step = { "complete", quest = id }
 				local o = q and q[14]
@@ -86,6 +94,7 @@ local function Expand(route)
 					local i = (tonumber(point) or 0) * 3 + 1
 					if not o[i] then i = 1 end
 					step.cont, step.wx, step.wy = o[i], o[i + 1], o[i + 2]
+					MapPoint(step, q.om and q.om[i])
 				end
 			else
 				step = { "note", quest = id, abandon = true }
@@ -102,7 +111,9 @@ local function Expand(route)
 			local c, x, y, z, ship = rest:match("^(-?%d+),(-?%d+),(-?%d+),(%d+),?(s?)$")
 			if c then
 				step = { "goto", zone = ns.RouteZoneName(tonumber(z)), ship = ship == "s" or nil }
-				step.cont, step.wx, step.wy = ns.ResolvePosition(tonumber(c), tonumber(x), tonumber(y))
+				local c0, x0, y0 = tonumber(c), tonumber(x), tonumber(y)
+				step.cont, step.wx, step.wy = ns.ResolvePosition(c0, x0, y0)
+				if c0 < 0 then step.map, step.x, step.y = -c0, x0 / 10000, y0 / 10000 end
 			end
 		end
 		if step then steps[#steps + 1] = step end

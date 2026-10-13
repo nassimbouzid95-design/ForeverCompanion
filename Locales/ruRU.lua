@@ -709,3 +709,8 @@ L["Rare:"] = "Редкий:"
 -- new
 L["Include the dungeons in the route (off: solo leveling, they are skipped)"] = "Включать подземелья в маршрут (выкл.: прокачка в одиночку, они пропускаются)"
 L["Follow the built-in leveling route of my race and class (1-60)"] = "Следовать встроенному маршруту прокачки для моей расы и класса (1-60)"
+
+-- new
+L["%s is not offered to you: step passed."] = "%s вам не предлагается: шаг пропущен."
+L["No built-in route for your race and class yet."] = "Пока нет встроенного маршрута для вашей расы и класса."
+L["Leveling route: %s (levels %d-%d), followed automatically."] = "Маршрут прокачки: %s (уровни %d-%d), отслеживается автоматически."

@@ -1,5 +1,15 @@
 # ForeverCompanion
 
+## v2.4.1
+
+- Leveling routes: the route list of /fc lvl only shows the routes of your class (a druid could pick the warrior route and get warrior quests). A route of another class picked before is replaced by yours on its own, and the chat says which route is followed.
+- A quest the giver does not offer you (another class or race, or not available yet) is passed instead of blocking the route.
+- Zephras Isle and the other new zones: the arrow, the map pin and the place under each step use the zone map (no more "?").
+- Dungeon quests rebuilt from the WoW Forever database (693 quests): Skyborne now see the quests of every dungeon (Ragefire Chasm: 6 quests), with the Forever givers, turn-ins and rewards. A quest done inside a dungeon now points to the dungeon entrance.
+- Quests whose objectives are inside a dungeon are only done with that dungeon in the routes, and quests that need a raid or battleground quest first are left out.
+- Routes computed again for every race and class (102 to 110 hours from 1 to 60) and checked one by one: right class, race and faction, quest chains in order, accept before turn-in, every step placed.
+- Best gear: stats of about 1 100 more items read from the WoW Forever database (Forever changed many Classic items). Items Wowhead has no Forever data for keep their Classic stats.
+
 ## v2.4.0
 
 - Leveling routes rebuilt on the WoW Forever quest database (4 455 quests, the new Forever quests and zones included, Skyborne too): one route for every race and class, 72 in all. Each route is simulated from 1 to 60 (walking and riding time, flight paths, boats, kill time, quest and kill experience, quest chains) and its settings are tried again and again to keep the fastest one.

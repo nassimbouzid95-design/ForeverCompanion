@@ -711,3 +711,8 @@ L["Rare:"] = "Raro:"
 -- new
 L["Include the dungeons in the route (off: solo leveling, they are skipped)"] = "Incluir las mazmorras en la ruta (desactivado: subida en solitario, se omiten)"
 L["Follow the built-in leveling route of my race and class (1-60)"] = "Seguir la ruta de subida integrada de mi raza y clase (1-60)"
+
+-- new
+L["%s is not offered to you: step passed."] = "%s no se te ofrece: paso omitido."
+L["No built-in route for your race and class yet."] = "Aún no hay ruta integrada para tu raza y clase."
+L["Leveling route: %s (levels %d-%d), followed automatically."] = "Ruta de subida: %s (niveles %d-%d), seguida automáticamente."

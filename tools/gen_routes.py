@@ -47,6 +47,7 @@ CLASSES = list(CLASS_BIT)
 # data
 Q = load('Quest'); N = load('Npc'); I = load('Item'); O = load('Object')
 QDB = {int(k): v for k, v in json.load(open(os.path.join(FDB_DIR, 'questdb.json'))).items()}
+ALL_Q = set(QDB)   # quests left out of the simulation below still block the quests that need them
 
 XPDB = {int(a): (int(b), int(c)) for a, b, c in re.findall(r'\[(\d+)\]\s*=\s*\{(\d+),\s*(\d+)\}',
         open(os.path.join(QDB_REPO, 'support/Forever/QuestXP/xpDB-classic.lua')).read())}
@@ -260,10 +261,10 @@ class Sim:
         if q['classes'] and not q['classes'] & self.cbit: return False
         if q['min'] > self.level: return False
         if q['excl'] > 0 and q['excl'] in self.excl: return False
-        if any(p in QDB and p not in self.turned for p in q.get('pre_all', ())): return False
-        pa = [p for p in q.get('pre_any', ()) if p in QDB]
+        if any(p in ALL_Q and p not in self.turned for p in q.get('pre_all', ())): return False
+        pa = [p for p in q.get('pre_any', ()) if p in ALL_Q]
         if pa and not any(p in self.turned for p in pa): return False
-        if q['prev'] < 0 and -q['prev'] in QDB and -q['prev'] not in self.log and -q['prev'] not in self.turned: return False
+        if q['prev'] < 0 and -q['prev'] in ALL_Q and -q['prev'] not in self.log and -q['prev'] not in self.turned: return False
         return True
 
     def value(self, qid, level=None):

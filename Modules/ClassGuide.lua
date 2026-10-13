@@ -280,17 +280,12 @@ function Guide:Header()
 	self:Text(table.concat(parts, "   ·   "), 15, C.text, 4)
 end
 
--- Built-in routes of this character, in order.
+-- Built-in routes of this character (faction, race and class), in level order.
 function Guide:Routes()
-	local _, race = UnitRace("player")
-	local faction = UnitFactionGroup("player")
+	local Route = ns.FC:GetModule("Route", true)
 	local list = {}
-	for _, route in ipairs(ns.Routes or {}) do
-		if route.auto and route.faction == faction then
-			for _, r in ipairs(route.races or {}) do
-				if r == race then list[#list + 1] = route break end
-			end
-		end
+	for _, route in ipairs(Route and Route:AllRoutes() or {}) do
+		if route.auto then list[#list + 1] = route end
 	end
 	return list
 end
@@ -303,7 +298,7 @@ function Guide:PageRoute()
 	self:Section(L["Your route from 1 to 60"])
 	self:Text(L["The step window follows this route on its own: it moves to the next step when you accept, finish or turn in a quest, and the arrow points to each step. Click a zone to start from there."], 12, C.muted, 2)
 	if #list == 0 then
-		self:Text(L["No built-in route for your race yet."], 13, C.muted, 10)
+		self:Text(L["No built-in route for your race and class yet."], 13, C.muted, 10)
 		return
 	end
 	self.stack:Space(6)

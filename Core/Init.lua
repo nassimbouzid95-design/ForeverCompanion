@@ -211,12 +211,18 @@ end
 ns.ResolvePosition = Resolve
 
 function ns.ResolveNewZones()
+	-- the map position is kept too (q.sm, q.em, q.om[i]): the arrow and the map pin use it on maps the
+	-- world coordinates do not cover well (Zephras Isle and the other new zones)
 	for _, q in pairs(ns.QuestDB or {}) do
-		if q[8] < 0 then q[8], q[9], q[10] = Resolve(q[8], q[9], q[10]) end
-		if q[11] < 0 then q[11], q[12], q[13] = Resolve(q[11], q[12], q[13]) end
+		if q[8] < 0 then q.sm = { -q[8], q[9] / 10000, q[10] / 10000 }; q[8], q[9], q[10] = Resolve(q[8], q[9], q[10]) end
+		if q[11] < 0 then q.em = { -q[11], q[12] / 10000, q[13] / 10000 }; q[11], q[12], q[13] = Resolve(q[11], q[12], q[13]) end
 		local o = q[14]
 		for i = 1, #o, 3 do
-			if o[i] < 0 then o[i], o[i + 1], o[i + 2] = Resolve(o[i], o[i + 1], o[i + 2]) end
+			if o[i] < 0 then
+				q.om = q.om or {}
+				q.om[i] = { -o[i], o[i + 1] / 10000, o[i + 2] / 10000 }
+				o[i], o[i + 1], o[i + 2] = Resolve(o[i], o[i + 1], o[i + 2])
+			end
 		end
 	end
 	for _, q in pairs(ns.DungeonQuestInfo or {}) do

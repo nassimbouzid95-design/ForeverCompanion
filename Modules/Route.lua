@@ -72,12 +72,20 @@ function ns.WorldPlace(continent, x, y)
 			return info.name
 		end
 	end
-	return L[ns.CONTINENT_NAMES[continent] or "?"] or "?"
+	-- not on Kalimdor or the Eastern Kingdoms (Zephras Isle...): the player's own map, if the point is on it
+	local here = C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
+	local hx, hy
+	if here then hx, hy = ns.WorldToMap(continent, x, y, here) end
+	if hx and hy then return string.format("%s (%.0f, %.0f)", ns.MapName(here), hx * 100, hy * 100) end
+	local cn = ns.CONTINENT_NAMES[continent]
+	if cn then return L[cn] end
+	return here and ns.MapName(here) or "?"
 end
 
 local function TurnedIn(questID)
 	return C_QuestLog.IsQuestFlaggedCompleted(questID)
 end
+
 
 ---------------------------------------------------------------------------
 -- Quest assistant: when no written route fits, the next steps come from the quest database
@@ -88,6 +96,21 @@ ns.QuestAssistant = Assistant
 
 local function HasBit(mask, bitValue)
 	return mask % (bitValue + bitValue) >= bitValue
+end
+
+-- Quests this character can not take: another class or race, or not offered by the giver when the player talked
+-- to them (ns.notOffered, this session only).  Their steps are passed.
+ns.notOffered = ns.notOffered or {}
+local function Unavailable(questID)
+	if not questID or InLog(questID) or TurnedIn(questID) then return false end
+	if ns.notOffered[questID] then return true end
+	local q = ns.QuestDB and ns.QuestDB[questID]
+	if not q then return false end
+	local _, _, classID = UnitClass("player")
+	if q[4] and q[4] ~= 0 and classID and not HasBit(q[4], 2 ^ (classID - 1)) then return true end
+	local raceBit = ns.PlayerRaceBit()
+	if q[3] and q[3] ~= 0 and raceBit and not HasBit(q[3], raceBit) then return true end
+	return false
 end
 
 local exclusiveGroups
@@ -276,6 +299,12 @@ function Route:ChooseRoute()
 	local state = CharState()
 	local level = UnitLevel("player")
 	local current = state.routeID and self:FindRoute(state.routeID)
+	if current then
+		-- a route picked by hand for another class or race (or from an older version) is replaced
+		local fits = false
+		for _, r in ipairs(self:AllRoutes()) do if r == current then fits = true break end end
+		if not fits then current = nil; state.routeID = nil end
+	end
 	if current and not state.finished[current.id] and level <= current.maxLevel then
 		return current
 	end
@@ -284,6 +313,9 @@ function Route:ChooseRoute()
 			if state.routeID ~= route.id then
 				state.routeID = route.id
 				state.step = 1
+				if route.auto then
+					ns.Print(string.format(L["Leveling route: %s (levels %d-%d), followed automatically."], route.name or "", route.minLevel, route.maxLevel))
+				end
 			end
 			return route
 		end
@@ -309,11 +341,11 @@ function Route:IsStepDone(route, index)
 	local kind = step[1]
 	if CharState().manualDone[route.id .. ":" .. index] then return true end
 	if kind == "accept" then
-		return InLog(step.quest) or TurnedIn(step.quest)
+		return InLog(step.quest) or TurnedIn(step.quest) or Unavailable(step.quest)
 	elseif kind == "complete" then
-		return TurnedIn(step.quest) or (InLog(step.quest) and C_QuestLog.IsComplete(step.quest))
+		return TurnedIn(step.quest) or (InLog(step.quest) and C_QuestLog.IsComplete(step.quest)) or Unavailable(step.quest)
 	elseif kind == "turnin" then
-		return TurnedIn(step.quest)
+		return TurnedIn(step.quest) or Unavailable(step.quest)
 	elseif kind == "level" then
 		return UnitLevel("player") >= step.level
 	elseif kind == "note" and step.abandon then
@@ -391,15 +423,27 @@ function Route:UpdateWaypoint()
 		return
 	end
 	local step = self:CurrentStep()
-	if step and step.wx and self:Settings().autoArrow then
-		if not ns.SameWaypoint(step.cont, step.wx, step.wy) then
-			ns.SetWorldWaypoint(step.cont, step.wx, step.wy, self:StepText(step, true), OWNER)
-		end
-	elseif step and step.map and step.x and step.y and self:Settings().autoArrow then
-		ns.SetWaypoint(step.map, step.x, step.y, self:StepText(step, true), OWNER)
+	if step and (step.wx or step.map) and self:Settings().autoArrow then
+		if not self:PointsAt(step) then self:PointAt(step) end
 	else
 		ns.ClearWaypoint(OWNER)
 	end
+end
+
+-- Arrow on a step: map position first (new zones such as Zephras Isle), world position otherwise.
+function Route:PointAt(step)
+	if step.map and step.x and step.y then
+		ns.SetWaypoint(step.map, step.x, step.y, self:StepText(step, true), OWNER)
+	elseif step.wx then
+		ns.SetWorldWaypoint(step.cont, step.wx, step.wy, self:StepText(step, true), OWNER)
+	end
+end
+
+function Route:PointsAt(step)
+	local wp = ns.GetWaypoint()
+	if not (wp and wp.owner == OWNER) then return false end
+	if step.map and step.x then return wp.mapID == step.map and wp.x == step.x and wp.y == step.y end
+	return ns.SameWaypoint(step.cont, step.wx, step.wy)
 end
 
 function Route:MarkCurrentDone()
@@ -487,9 +531,11 @@ function Route:StepText(step, short)
 			end
 		end
 	end
-	if step.wx then
+	if step.map and step.x then
+		text = text .. string.format("\n|cff888888%s (%.0f, %.0f)|r", ns.MapName(step.map), step.x * 100, step.y * 100)
+	elseif step.wx then
 		text = text .. "\n|cff888888" .. ns.WorldPlace(step.cont, step.wx, step.wy) .. "|r"
-	elseif step.map and step.x then
+	elseif false then
 		text = text .. string.format("\n|cff888888%s %.1f, %.1f|r", ns.MapName(step.map), step.x * 100, step.y * 100)
 	end
 	return text
@@ -752,8 +798,8 @@ function Route:UpdateWindow()
 					if button == "RightButton" then
 						CharState().manualDone[route.id .. ":" .. stepIndex] = true
 						self:Advance()
-					elseif step.wx then
-						ns.SetWorldWaypoint(step.cont, step.wx, step.wy, self:StepText(step, true), OWNER)
+					elseif step.wx or step.map then
+						self:PointAt(step)
 					end
 				end)
 				y = y + h + 2
@@ -891,8 +937,65 @@ function Route:QUEST_LOG_UPDATE()
 	end)
 end
 
+-- Talking to the giver of the current "accept" step: if the quest is not in what they offer, the step is passed
+-- (and its later steps), so the route never waits on a quest the character can not get.
+function Route:CheckOffered(offeredIDs, offeredTitles)
+	local step = self.route and self:CurrentStep()
+	if not (step and step[1] == "accept" and step.quest) or InLog(step.quest) or TurnedIn(step.quest) then return end
+	local q = ns.QuestDB and ns.QuestDB[step.quest]
+	if q and q[2] and UnitLevel("player") < q[2] then return end
+	local npc = UnitName("npc")
+	local near = false
+	if step.npc and npc and not ns.IsSecret(npc) and npc == step.npc then near = true end
+	if not near and step.wx then
+		local cont, wx, wy = ns.PlayerWorldPosition()
+		near = cont == step.cont and wx and math.sqrt((wx - step.wx) ^ 2 + (wy - step.wy) ^ 2) < 15
+	end
+	if not near then return end
+	if offeredIDs[step.quest] then return end
+	local title = QuestTitle(step)
+	if title and offeredTitles[title] then return end
+	ns.notOffered[step.quest] = true
+	ns.Print(string.format(L["%s is not offered to you: step passed."], title or ("#" .. step.quest)))
+	self:Advance()
+end
+
+function Route:GOSSIP_SHOW()
+	self.lastGossip = GetTime()
+	if not (C_GossipInfo and C_GossipInfo.GetAvailableQuests) then return end
+	local ids, titles = {}, {}
+	for _, info in ipairs(C_GossipInfo.GetAvailableQuests() or {}) do
+		if info.questID then ids[info.questID] = true end
+		if info.title and not ns.IsSecret(info.title) then titles[info.title] = true end
+	end
+	for _, info in ipairs(C_GossipInfo.GetActiveQuests and C_GossipInfo.GetActiveQuests() or {}) do
+		if info.questID then ids[info.questID] = true end
+	end
+	self:CheckOffered(ids, titles)
+end
+
+function Route:QUEST_GREETING()
+	self.lastGossip = GetTime()
+	local ids, titles = {}, {}
+	for i = 1, (GetNumAvailableQuests and GetNumAvailableQuests() or 0) do
+		local title = GetAvailableTitle(i)
+		if title and not ns.IsSecret(title) then titles[title] = true end
+	end
+	self:CheckOffered(ids, titles)
+end
+
+function Route:QUEST_DETAIL()
+	-- a quest picked from a list of several is not the giver's only quest
+	if self.lastGossip and GetTime() - self.lastGossip < 30 then return end
+	local id = GetQuestID and GetQuestID()
+	if id and id ~= 0 then self:CheckOffered({ [id] = true }, {}) end
+end
+
 function Route:OnEnable()
 	self:CreateWindow()
+	self:RegisterEvent("GOSSIP_SHOW")
+	self:RegisterEvent("QUEST_GREETING")
+	self:RegisterEvent("QUEST_DETAIL")
 	self:RegisterEvent("QUEST_ACCEPTED")
 	self:RegisterEvent("QUEST_TURNED_IN")
 	self:RegisterEvent("QUEST_LOG_UPDATE")

@@ -709,3 +709,8 @@ L["Rare:"] = true
 -- new
 L["Include the dungeons in the route (off: solo leveling, they are skipped)"] = true
 L["Follow the built-in leveling route of my race and class (1-60)"] = true
+
+-- new
+L["%s is not offered to you: step passed."] = true
+L["No built-in route for your race and class yet."] = true
+L["Leveling route: %s (levels %d-%d), followed automatically."] = true
